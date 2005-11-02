@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.3.1 (August 14, 2004)")
+(defconst elscreen-version "1.3.2 (August 23, 2004)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 14, 2004
+;; Revised:  August 23, 2004
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -478,14 +478,25 @@ buffer-name and corresponding screen-name."
   (let* ((frame (or frame (selected-frame))))
     (not (null (elscreen-get-window-configuration screen frame)))))
 
+(defun elscreen-copy-tree (tree)
+  (when (consp tree)
+    (let ((original-tree tree))
+      (setq tree (list (elscreen-copy-tree (car original-tree))))
+      (nconc tree (elscreen-copy-tree (cdr original-tree)))))
+  tree)
+
 (defmacro elscreen-save-screen-excursion (&rest body)
-  (` (let ((original-frame-confs (copy-tree elscreen-frame-confs)))
+  (` (let ((original-buffer-list (buffer-list))
+	   (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
        (unwind-protect
 	   (progn
 	     (,@ body))
 	 (setq elscreen-frame-confs original-frame-confs)
 	 (elscreen-goto-internal (elscreen-get-current-screen))
-	 (elscreen-screen-number-string-update)))))
+	 (elscreen-screen-number-string-update)
+	 (while original-buffer-list
+	   (bury-buffer (car original-buffer-list))
+	   (setq original-buffer-list (cdr original-buffer-list)))))))
 
 
 ; Display message in minibuffers
@@ -699,20 +710,16 @@ buffer-name and corresponding screen-name."
 		    (throw 'find-screen-with-buffer screen)))
 	      screen-list)
 	     nil))))
-;    (elscreen-goto-internal (elscreen-get-current-screen))
     (setq elscreen-screen-modified-hook-suppress nil)
     (if target-screen
  	(progn
  	  (elscreen-goto target-screen)
- 	  (select-window (get-buffer-window buffer))
-	  target-screen)
+ 	  (select-window (get-buffer-window buffer)))
       (if (setq target-screen (elscreen-create))
-	  (progn
-	    (switch-to-buffer buffer)
-	    target-screen)
+	  (switch-to-buffer buffer)
  	(split-window)
- 	(switch-to-buffer-other-window buffer)
-	nil))))
+ 	(switch-to-buffer-other-window buffer)))
+    target-screen))
 
 (defun elscreen-screen-nickname (screen-nickname)
   "Specify screen name."
@@ -803,7 +810,6 @@ buffer-name and corresponding screen-name."
 	(set-alist 'screen-to-name-alist screen screen-name))
       screen-list))
 
-;    (elscreen-goto-internal (elscreen-get-current-screen))
     (setq elscreen-screen-modified-hook-suppress nil)
     screen-to-name-alist))
 
