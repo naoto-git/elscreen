@@ -1,7 +1,7 @@
-ElScreen-GF 1.0 README file
+ElScreen-GF 1.01 README file
 
-This is the distribution of ElScreen-GF 1.0, released  January 1997
-with ElScreen 1.0. This is an EMACS interface to 'GNU id-utils'. It
+This is the distribution of ElScreen-GF 1.01, released  January 1997
+with ElScreen 1.02. This is an EMACS interface to 'GNU id-utils'. It
 works inside the ElScreen environment.
 
 'GNU id-utils' is language-independent identifier database tool. This
@@ -15,12 +15,12 @@ Files
 -----
 This package should contain the following files:
 
-    elscreen-gf.el          ElScreen-GF version 1.0 main file
+    elscreen-gf.el          ElScreen-GF version 1.01 main file
     around-point.el         around-point function version 1.0
                             (by Youki Kadobayashi
                                 <youki@center.osaka-u.ac.jp>)
     directory-complete.el   read-directory-name function version 0.1
-    README                  Introduction to ElScreen-GF 1.0 (this file)
+    README                  Introduction to ElScreen-GF 1.01 (this file)
     QuickStart              Quick start guide
 
 Installation

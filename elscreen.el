@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.01 (8 January, 1997)")
+(defconst elscreen-version "1.02 (January 12, 1997)")
 ;;
 ;; Author:   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el 
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
-;; Created:  22 June, 1996
-;; Revised:  8 January, 1997
+;; Created:  June 22, 1996
+;; Revised:  January 12, 1997
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -34,15 +34,12 @@
 (defvar elscreen-prefix-key "\C-z"
   "*ElScreen command prefix-key.")
 
-(defvar elscreen-disable-suspend-emacs t
-  "*If non-nil, disable suspend-emcas.")
-
 (defvar elscreen-show-screen-number t
   "*If non-nil, show the number of the current screen in the mode line.")
 
 (defvar elscreen-buffer-to-screen-alist
   '(("inbox\\|reply to\\|\\+draft\\|Mew" . "Mew")
-    ("Article\\|Subject\\|Newsgroup" . "GNUS")
+    ("Article\\|Subject\\|Newsgroup\\|Group\\|Summary" . "Gnus")
     ("[Ss]hell" . "shell")
     ("compilation" . "compile")
     ("-telnet" . "telnet")
@@ -58,10 +55,17 @@
 ;
 ; variables
 ;
-(setq global-mode-string '("" elscreen-mode-line display-time-string))
-
-(defvar elscreen-mode-line "[0] "
+(defvar elscreen-mode-line (and elscreen-show-screen-number "[0] ")
   "*Shows the screen number in the mode line.") 
+
+(setq global-mode-string
+      (cond
+       ((not (listp global-mode-string))
+	(list "" 'elscreen-mode-line global-mode-string))
+       ((not (memq 'elscreen-mode-line global-mode-string))
+	(append '("" elscreen-mode-line) global-mode-string))
+       (t
+	global-mode-string)))
 
 (defvar elscreen-confs-alist (list (cons 0 (current-window-configuration)))
   "*Alist that contains the information about screen configurations.")
@@ -109,9 +113,7 @@
 ;
 (defvar elscreen-map (make-sparse-keymap)
   "*Keymap for ElScreen.")
-
-(define-key global-map elscreen-prefix-key 'elscreen-command)
-(fset 'elscreen-command elscreen-map)
+(global-set-key elscreen-prefix-key elscreen-map)
 
 (define-key elscreen-map  "\C-c" 'elscreen-create)
 (define-key elscreen-map  "c"    'elscreen-create)
@@ -141,7 +143,6 @@
 (define-key elscreen-map  "A"    'elscreen-name)
 (define-key elscreen-map  "v"    'elscreen-show-version)
 (define-key elscreen-map  "i"    'elscreen-number-mode-line)
-(define-key elscreen-map  "\C-z" 'elscreen-suspend-emacs)
 (define-key elscreen-map  "l"    'elscreen-link)
 (define-key elscreen-map  "s"    'elscreen-split)
 
@@ -150,11 +151,11 @@
 
 (defun elscreen-minibuffer-setup ()
   "Disable elscreen-prefix-key when minibuffer become active."
-  (define-key global-map elscreen-prefix-key 'elscreen-minibuffer-message))
+  (global-set-key elscreen-prefix-key 'elscreen-minibuffer-message))
 
 (defun elscreen-minibuffer-exit ()
   "Enable elscreen-prefix-key when minibuffer become inactive."
-  (define-key global-map elscreen-prefix-key 'elscreen-command))
+  (global-set-key elscreen-prefix-key elscreen-map))
 
 ;
 ; code
@@ -550,17 +551,6 @@ creating one if none already exists."
 (elscreen-add-help)
 
 
-(defun elscreen-suspend-emacs ()
-  "Suspend or iconize Emacs."
-  (interactive)
-  (if (null elscreen-disable-suspend-emacs)
-      (cond
-       (window-system
-	(iconify-or-deiconify-frame))
-       (t
-	(suspend-emacs)))))
-
-
 (defun elscreen-show-last-message ()
   "Show last message."
   (interactive)
@@ -579,9 +569,8 @@ creating one if none already exists."
 
 
 (defun elscreen-mode-line-update () 
-  (if elscreen-show-screen-number
-      (setq elscreen-mode-line (concat "[" elscreen-this-screen "] "))
-    (setq elscreen-mode-line "")))
+  (setq elscreen-mode-line (and elscreen-show-screen-number
+				(concat "[" elscreen-this-screen "] "))))
 
 (defun elscreen-message (message &optional sec)
   (setq elscreen-last-message message)

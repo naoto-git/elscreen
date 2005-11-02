@@ -1,7 +1,25 @@
+ElScreen and ElScreen-GF Change log file
+
+Mon January 13 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+
+        * ElScreen 1.02 released.
+
+Sun January 12 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+
+        * ElScreen:
+          - fix the bug of setting 'global-mode-string'.
+          - change the way to set 'global-map'.
+          - delete function 'elscreen-suspend-emacs'.
+            use C-x C-z to suspend emacs.
+        * ElScreen-GF:
+          - fix the bug of setting 'global-mode-string'.
+
 Wed January 8 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
-        * add function 'elscreen-suspend-emacs'
+        * ElScreen 1.01 released.
+        * ElScreen:
+          - add function 'elscreen-suspend-emacs'.
 
 Tue January 7 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
-		* ElScreen 1.0 released
+        * ElScreen 1.0 released.

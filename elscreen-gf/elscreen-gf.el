@@ -2,14 +2,14 @@
 ;;
 ;; elscreen-gf.el
 ;;
-(defconst elscreen-gf-version "1.0 (7 January, 1997)")
+(defconst elscreen-gf-version "1.01 (January 12, 1997)")
 ;;
 ;; Author:   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: grep-family.el
 ;;              by Youki Kadobayashi <youki-k@is.aist-nara.ac.jp>
-;; Created:  23 June, 1996
-;; Revised:  7 January, 1997
+;; Created:  June 23, 1996
+;; Revised:  January 12, 1997
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -82,9 +82,7 @@
 ;
 (defvar elscreen-gf-map (make-sparse-keymap)
   "*Keymap for elscreen-gf.")
-
-(define-key elscreen-map  "\C-g" 'elscreen-gf-command)
-(fset 'elscreen-gf-command elscreen-gf-map)
+(define-key elscreen-map  "\C-g" elscreen-gf-map)
 
 (define-key elscreen-gf-map  "G" 'elscreen-gf-grep)
 (define-key elscreen-gf-map  "g" 'elscreen-gf-gid)
