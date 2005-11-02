@@ -1,0 +1,9 @@
+ElScreen-GF 1.0 Quick Start Guide
+
+1) Install Elscreen, ElScreen-GF, and GNU id-utils.
+2) Visit a source code in the language which GNU id-utils supports.
+3) Type 'C-z C-g m', and 'RET' 'RET' 'y'.
+4) Put the cursor on the keyword you want to search.
+5) Type 'C-z C-g g', and 'RET'.
+6) Select line you want to jump to.
+7) Type 'o'.
