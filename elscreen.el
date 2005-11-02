@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.2.2 (September 19, 2001)")
+(defconst elscreen-version "1.2.4 (August 28, 2002)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  September 19, 2001
+;; Revised:  August 28, 2002
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -38,17 +38,19 @@
   "*If non-nil, show the number of the current screen in the mode line.")
 
 (defvar elscreen-buffer-to-screen-alist
-  '(("Summary" . "Wanderlust")
-    ("[Ss]hell" . "shell")
+  '(("[Ss]hell" . "shell")
     ("compilation" . "compile")
     ("-telnet" . "telnet")
-    ("IRC" . "IRC")
     ("dict" . "OnlineDict"))
   "*Alist composed of the pair of regular expression of buffer-name and corresponding screen-name.")
 
 (defvar elscreen-mode-to-screen-alist
-  '(("Dired" . "Dired")
-    ("Info" . "Info"))
+  '(("^wl-" . "Wanderlust")
+    ("^mew-" . "Mew")
+    ("^irchat-" . "IRChat")
+    ("^liece-" . "Liece")
+    ("^dired-mode$" . "Dired")
+    ("^Info-mode$" . "Info"))
   "*Alist composed of the pair of mode-name and corresponding screen-name.")
 
 ;
@@ -107,6 +109,7 @@
 
 (define-key elscreen-map  "\C-c" 'elscreen-create)
 (define-key elscreen-map  "c"    'elscreen-create)
+(define-key elscreen-map  "\C-k" 'elscreen-kill)
 (define-key elscreen-map  "k"    'elscreen-kill)
 (define-key elscreen-map  "\C-p" 'elscreen-previous)
 (define-key elscreen-map  "p"    'elscreen-previous)
@@ -128,7 +131,9 @@
 (define-key elscreen-map  "?"    'elscreen-help)
 (define-key elscreen-map  "\C-f" 'elscreen-find-file)
 (define-key elscreen-map  "b"    'elscreen-switch-to-buffer)
+(define-key elscreen-map  "\C-w" 'elscreen-show-list)
 (define-key elscreen-map  "w"    'elscreen-show-list)
+(define-key elscreen-map  "\C-m" 'elscreen-show-last-message)
 (define-key elscreen-map  "m"    'elscreen-show-last-message)
 (define-key elscreen-map  "t"    'elscreen-show-time)
 (define-key elscreen-map  "A"    'elscreen-name)
@@ -162,7 +167,11 @@
 (defun elscreen-free-confs (frame)
   (remove-alist 'elscreen-confs-alist frame))
 
-(add-hook 'create-frame-hook 'elscreen-alloc-confs)
+(if (boundp 'create-frame-hook)
+    ; XEmacs
+    (add-hook 'create-frame-hook 'elscreen-alloc-confs)
+  ; GNU Emacs
+  (add-hook 'after-make-frame-functions 'elscreen-alloc-confs))
 (add-hook 'delete-frame-hook 'elscreen-free-confs)
 (elscreen-alloc-confs (selected-frame))
 
@@ -412,13 +421,13 @@
 	(i 0))
     (while (and flag (< i 10))
       (if (and (elscreen-get-winconf i)
-	       (elscreen-goto i))
+	       (elscreen-goto0 i))
 	  (if (member buffer (elscreen-get-screen-buffer-list))
 	      (progn
 		(setq target-screen i)
 		(setq flag nil))))
       (setq i (+ i 1)))
-    (elscreen-goto current-screen)
+    (elscreen-goto0 current-screen)
     (elscreen-set-previous-screen previous-screen)
     (if target-screen
 	(progn
@@ -479,7 +488,7 @@
 		      (car (nth j elscreen-mode-to-screen-alist))
 		      elscreen-mode-names)
 		     (progn
-		       (put-alist
+		       (set-alist
 			'elscreen-tmp-name-alist
 			i (cdr (nth j elscreen-mode-to-screen-alist)))
 		       (setq flag nil)))
@@ -518,7 +527,7 @@
 
 (defun elscreen-get-mode-list ()
   (let ((org-window (selected-window))
-	(mode-list mode-name))
+	(mode-list (symbol-name major-mode)))
     (while (progn (other-window 1)
 		  (not (eq org-window (selected-window))))
       (setq mode-list (concat mode-list ":" mode-name)))
@@ -590,9 +599,10 @@ creating one if none already exists."
   
 
 (defun elscreen-message (message &optional sec)
-  (setq elscreen-last-message message)
-  (message message)
-  (sit-for (or sec 3))
+  (when message
+    (setq elscreen-last-message message)
+    (message "%s" message)
+    (sit-for (or sec 3)))
   (message nil))
 
 ;

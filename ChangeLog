@@ -1,8 +1,44 @@
+2002-08-28  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-version): Set the version number to 1.2.4.
+
+2002-08-21  Naoto Morishima  <naoto@morishima.net>
+
+	From Dan Debertin <airboss@nodewarrior.org>:
+	* Add elscreen-alloc-confs to hook after-make-frame-functions when
+	create-frame-hook is not bounded.  This will be able to avoid
+	errors on GNU emacs.
+	
+2002-08-15  Naoto Morishima  <naoto@morishima.net>
+
+	From <sen_ml@eccosys.com>:
+	* Add some keysquences so that following keysequence pairs are
+	bound to the same functionality.
+
+		<prefix> C-w / <prefix> w
+		<prefix> C-k / <prefix> k
+		<prefix> C-m / <prefix> m
+
+2002-07-18  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-get-screen-create): In while loop, use elscreen-goto0
+	instead of elscreen-goto.
+
+2002-06-11  Naoto Morishima  <naoto@morishima.net>
+
+	From Yoichi NAKAYAMA  <yoichi@eken.phys.nagoya-u.ac.jp>:
+	* (elscreen-show-list): Bug fixed.
+	* (elscreen-message): Avoid error even when message contains
+	format-string-like characters (e.g. "%" in the buffer name).
+	* (elscreen-get-mode-list): Watch major-mode instead of its name.
+	(elscreen-mode-to-screen-alist): Change default value.
+	(elscreen-buffer-to-screen-alist): Ditto.
+
 2001-09-19  Naoto Morishima  <naoto@morishima.net>
 
 	* ElScreen 1.2.2
-	* (elscreen-goto0): new function.
-	* (elscreen-goto): call redraw-frame.
+	* (elscreen-goto0): New function.
+	* (elscreen-goto): Call redraw-frame.
 
 2001-03-25  Naoto Morishima  <moley@kyoto.wide.ad.jp>
 
@@ -22,13 +58,13 @@
 
 	* Fix the bug of setting 'global-mode-string'.
 	* Change the way to set 'global-map'.
-	* Delete function 'elscreen-suspend-emacs'. use C-x C-z to suspend
-	emacs. 
+	* (elscreen-suspend-emacs): Deleted.  Use C-x C-z to suspend
+	emacs instead.
 
 1997-01-08  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
 	* ElScreen 1.01 released.
-	* Add function 'elscreen-suspend-emacs'.
+	* (elscreen-suspend-emacs): New function.
 
 1997-01-07  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
