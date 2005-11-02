@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.3.0 (August 6, 2004)")
+(defconst elscreen-version "1.3.1 (August 14, 2004)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 6, 2004
+;; Revised:  August 14, 2004
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -66,11 +66,14 @@
 (defcustom elscreen-mode-to-nickname-alist
   '(("^wl-draft-mode$" . (lambda (buf) (format "WL(%s)" (buffer-name buf))))
     ("^wl-" . "Wanderlust")
+    ("^mew-draft-mode$" . (lambda (buf) (format "Mew(%s)" (buffer-name buf))))
     ("^mew-" . "Mew")
     ("^w3m-mode" . (lambda (buf) (w3m-current-title)))
     ("^irchat-" . "IRChat")
     ("^liece-" . "Liece")
-    ("^dired-mode$" . "Dired")
+    ("^dired-mode$" . (lambda (buf)
+			(set-buffer buf)
+			(format "Dired(%s)" dired-directory)))
     ("^Info-mode$" . "Info")
     ("^lookup-" . "Lookup"))
   "*Alist composed of the pair of mode-name and corresponding screen-name."
@@ -90,6 +93,7 @@ buffer-name and corresponding screen-name."
   :tag "Buffer-name to nickname alist"
   :group 'elscreen)
 
+(defvar elscreen-display-tab-set-nil-hook nil)
 (when elscreen-on-emacs ; GNU Emacs 21
   (defcustom elscreen-display-tab t
     "*If non-nil, display the tabs at the top of screen."
@@ -98,7 +102,8 @@ buffer-name and corresponding screen-name."
     :set (lambda (symbol value)
 	   (custom-set-default symbol value)
 	   (when (fboundp 'elscreen-e21-tab-update)
-	     (elscreen-e21-tab-update t)))
+	     (elscreen-e21-tab-update t)
+	     (run-hooks 'elscreen-display-tab-set-nil-hook)))
     :group 'elscreen)
 
   (defcustom elscreen-tab-width 16
@@ -185,6 +190,7 @@ buffer-name and corresponding screen-name."
 (define-key elscreen-map "9"    'elscreen-jump)
 (define-key elscreen-map "?"    'elscreen-help)
 (define-key elscreen-map "b"    'elscreen-goto-screen-with-buffer)
+(define-key elscreen-map "\C-s" 'elscreen-swap)
 (define-key elscreen-map "\C-w" 'elscreen-display-screen-name-list)
 (define-key elscreen-map "w"    'elscreen-display-screen-name-list)
 (define-key elscreen-map "\C-m" 'elscreen-display-last-message)
@@ -193,7 +199,7 @@ buffer-name and corresponding screen-name."
 (define-key elscreen-map "A"    'elscreen-screen-nickname)
 (define-key elscreen-map "v"    'elscreen-display-version)
 (define-key elscreen-map "i"    'elscreen-display-screen-number-toggle)
-(define-key elscreen-map "j"    'elscreen-join)
+(define-key elscreen-map "j"    'elscreen-link)
 (define-key elscreen-map "s"    'elscreen-split)
 (define-key elscreen-map "\C-f" 'elscreen-find-file)
 (define-key elscreen-map "\M-x" 'elscreen-execute-extended-command)
@@ -421,6 +427,7 @@ buffer-name and corresponding screen-name."
 (elscreen-screen-modified-set-hook
  (recenter 'force) (change-major-mode-hook 'force)
  window-configuration-change-hook window-size-change-functions
+ (pre-command-hook 'force)
  (handle-switch-frame 'force) ; GNU Emacs 21
  (select-frame-hook 'force) ; XEmacs
  )
@@ -466,6 +473,19 @@ buffer-name and corresponding screen-name."
 (defsubst elscreen-get-screen-list (&optional frame)
   (let ((frame (or frame (selected-frame))))
     (mapcar 'car (elscreen-get-conf-list frame 'window-configuration))))
+
+(defun elscreen-screen-live-p (screen &optional frame)
+  (let* ((frame (or frame (selected-frame))))
+    (not (null (elscreen-get-window-configuration screen frame)))))
+
+(defmacro elscreen-save-screen-excursion (&rest body)
+  (` (let ((original-frame-confs (copy-tree elscreen-frame-confs)))
+       (unwind-protect
+	   (progn
+	     (,@ body))
+	 (setq elscreen-frame-confs original-frame-confs)
+	 (elscreen-goto-internal (elscreen-get-current-screen))
+	 (elscreen-screen-number-string-update)))))
 
 
 ; Display message in minibuffers
@@ -514,7 +534,8 @@ buffer-name and corresponding screen-name."
   (interactive)
   (cond
    ((>= (elscreen-get-number-of-screens) 10)
-    (elscreen-message "Can't create any more screen"))
+    (elscreen-message "Can't create any more screen")
+    nil)
    (t
     (elscreen-set-window-configuration (elscreen-get-current-screen)
 				       (current-window-configuration))
@@ -530,7 +551,8 @@ buffer-name and corresponding screen-name."
     (elscreen-set-window-configuration (elscreen-get-current-screen)
 				       (current-window-configuration))
     (elscreen-screen-modified)
-    (run-hooks 'elscreen-create-hook))))
+    (run-hooks 'elscreen-create-hook)
+    (elscreen-get-current-screen))))
 
 (defun elscreen-kill (&optional screen) 
   "Kill the current screen."
@@ -538,10 +560,12 @@ buffer-name and corresponding screen-name."
   (let ((screen (or (and (numberp screen) screen)
 		    (elscreen-get-current-screen))))
     (cond
-     ((null (elscreen-get-window-configuration screen))
-      (elscreen-message "There is no such screen, cannot kill"))
+     ((not (elscreen-screen-live-p screen))
+      (elscreen-message "There is no such screen, cannot kill")
+      nil)
      ((= (elscreen-get-number-of-screens) 1)
-      (elscreen-message "There is only one screen, cannot kill"))
+      (elscreen-message "There is only one screen, cannot kill")
+      nil)
      (t 
       (elscreen-delete-window-configuration screen)
       (elscreen-delete-screen-nickname screen)
@@ -557,7 +581,8 @@ buffer-name and corresponding screen-name."
        ((eq screen (elscreen-get-previous-screen))
 	(elscreen-set-previous-screen nil)))
       (elscreen-screen-modified)
-      (run-hooks 'elscreen-kill-hook)))))
+      (run-hooks 'elscreen-kill-hook)
+      screen))))
 
 
 ; Switch the screen
@@ -572,7 +597,7 @@ buffer-name and corresponding screen-name."
   (interactive "NGoto screen number: ")
   (cond
    ((eq (elscreen-get-current-screen) screen))
-   ((elscreen-get-window-configuration screen)
+   ((elscreen-screen-live-p screen)
     (if (elscreen-get-current-screen)
 	(elscreen-set-window-configuration (elscreen-get-current-screen)
 					   (current-window-configuration)))
@@ -637,6 +662,23 @@ buffer-name and corresponding screen-name."
 	(elscreen-goto next-screen))))
 
 
+; Swap current screen number with previous one
+
+(defun elscreen-swap ()	
+  (interactive)	
+  (let* ((current-screen (elscreen-get-current-screen))
+	 (previous-screen (elscreen-get-previous-screen))
+	 (current-window-configuration
+	  (elscreen-get-window-configuration current-screen))
+	 (previous-window-configuration
+	  (elscreen-get-window-configuration previous-screen)))
+    (elscreen-set-window-configuration current-screen
+				       previous-window-configuration)
+    (elscreen-set-window-configuration previous-screen
+				       current-window-configuration)
+    (elscreen-goto-internal current-screen)))
+
+
 ; Get screen with specified buffer, or create new screen
 
 (defun elscreen-get-screen-create (buffer)
@@ -646,30 +688,31 @@ buffer-name and corresponding screen-name."
   (let* ((screen-list (sort (elscreen-get-screen-list) '<))
 	 (target-screen 
 	  (catch 'find-screen-with-buffer
-	    (progn
-	      (mapcar
-	       (lambda (screen)
-		 (elscreen-goto-internal screen)
-		 (if (member buffer
-			     (mapcar (lambda (window)
-				       (window-buffer window))
-				     (window-list)))
-		     (throw 'find-screen-with-buffer screen)))
-	       screen-list)
-	      nil))))
-    (elscreen-goto-internal (elscreen-get-current-screen))
+	    (elscreen-save-screen-excursion
+	     (mapcar
+	      (lambda (screen)
+		(elscreen-goto-internal screen)
+		(if (member buffer
+			    (mapcar (lambda (window)
+				      (window-buffer window))
+				    (window-list)))
+		    (throw 'find-screen-with-buffer screen)))
+	      screen-list)
+	     nil))))
+;    (elscreen-goto-internal (elscreen-get-current-screen))
     (setq elscreen-screen-modified-hook-suppress nil)
     (if target-screen
  	(progn
  	  (elscreen-goto target-screen)
- 	  (select-window (get-buffer-window buffer)))
-      (if (< (elscreen-get-number-of-screens) 10)
- 	  (progn
- 	    (elscreen-create)
- 	    (switch-to-buffer buffer))
+ 	  (select-window (get-buffer-window buffer))
+	  target-screen)
+      (if (setq target-screen (elscreen-create))
+	  (progn
+	    (switch-to-buffer buffer)
+	    target-screen)
  	(split-window)
- 	(switch-to-buffer-other-window buffer)))))
-
+ 	(switch-to-buffer-other-window buffer)
+	nil))))
 
 (defun elscreen-screen-nickname (screen-nickname)
   "Specify screen name."
@@ -706,60 +749,61 @@ buffer-name and corresponding screen-name."
 	 (screen-name nil)
 	 (screen-to-name-alist nil)
 	 (nickname-list nil))
-    (mapcar
-     (lambda (screen)
-       (elscreen-goto-internal screen)
-       ; if nickname exists, use it.
-       (setq screen-name (elscreen-get-screen-nickname screen))
-       ; nickname does not exist, so examine major-mode and buffer-name
-       (when (null screen-name)
-	 (walk-windows
-	  (lambda (window)
-	    (set-buffer (window-buffer window))
-	    (setq nickname-list
-		  (cons
-		   (or
-		    (elscreen-get-alist-to-nickname
-		     elscreen-mode-to-nickname-alist
-		     string-match (symbol-name major-mode))
-		    (elscreen-get-alist-to-nickname
-		     elscreen-buffer-to-nickname-alist
-		     string-match (buffer-name))
-		    (cons 'buffer-name (buffer-name)))
-		   nickname-list)))
-	  'other 'other)
-	     
-	 (setq screen-name (cdr (car nickname-list)))
-	 (if (eq (car (car nickname-list)) 'nickname)
+    (elscreen-save-screen-excursion
+     (mapcar
+      (lambda (screen)
+	(elscreen-goto-internal screen)
+        ; if nickname exists, use it.
+	(setq screen-name (elscreen-get-screen-nickname screen))
+        ; nickname does not exist, so examine major-mode and buffer-name
+	(when (null screen-name)
+	  (walk-windows
+	   (lambda (window)
+	     (set-buffer (window-buffer window))
 	     (setq nickname-list
-		   (delete (car nickname-list) nickname-list))
-	   (setq nickname-list (cdr nickname-list)))
-	 (while (> (length nickname-list) 0)
-	   (setq screen-name
-		 (concat screen-name ":" (cdr (car nickname-list))))
-	   (if (eq (car (car nickname-list)) 'nickname)
-	       (setq nickname-list
-		     (delete (car nickname-list) nickname-list))
-	     (setq nickname-list (cdr nickname-list)))))
+		   (cons
+		    (or
+		     (elscreen-get-alist-to-nickname
+		      elscreen-mode-to-nickname-alist
+		      string-match (symbol-name major-mode))
+		     (elscreen-get-alist-to-nickname
+		      elscreen-buffer-to-nickname-alist
+		      string-match (buffer-name))
+		     (cons 'buffer-name (buffer-name)))
+		    nickname-list)))
+	   'other 'other)
+	     
+	  (setq screen-name (cdr (car nickname-list)))
+	  (if (eq (car (car nickname-list)) 'nickname)
+	      (setq nickname-list
+		    (delete (car nickname-list) nickname-list))
+	    (setq nickname-list (cdr nickname-list)))
+	  (while (> (length nickname-list) 0)
+	    (setq screen-name
+		  (concat screen-name ":" (cdr (car nickname-list))))
+	    (if (eq (car (car nickname-list)) 'nickname)
+		(setq nickname-list
+		      (delete (car nickname-list) nickname-list))
+	      (setq nickname-list (cdr nickname-list)))))
 
-       (if (and (integerp truncate-length)
-		(> truncate-length 3)
-		(> (string-width screen-name) truncate-length))
-	   (setq screen-name
-		 (truncate-string-to-width
-		  (concat (truncate-string-to-width screen-name
-						    (- truncate-length 3))
-			  "...")
-		  truncate-length nil ?.))
-	 (when padding
-	   (setq screen-name
-		 (truncate-string-to-width screen-name
-					   truncate-length nil ?\ ))))
+	(if (and (integerp truncate-length)
+		 (> truncate-length 3)
+		 (> (string-width screen-name) truncate-length))
+	    (setq screen-name
+		  (truncate-string-to-width
+		   (concat (truncate-string-to-width screen-name
+						     (- truncate-length 3))
+			   "...")
+		   truncate-length nil ?.))
+	  (when padding
+	    (setq screen-name
+		  (truncate-string-to-width screen-name
+					    truncate-length nil ?\ ))))
 
-       (set-alist 'screen-to-name-alist screen screen-name))
-     screen-list)
+	(set-alist 'screen-to-name-alist screen screen-name))
+      screen-list))
 
-    (elscreen-goto-internal (elscreen-get-current-screen))
+;    (elscreen-goto-internal (elscreen-get-current-screen))
     (setq elscreen-screen-modified-hook-suppress nil)
     screen-to-name-alist))
 
@@ -780,26 +824,6 @@ buffer-name and corresponding screen-name."
 		      "")
 		  screen-name)))
       screen-list "  "))))
-
-
-(defsubst elscreen-e21-tab-create-keymap (&optional function screen)
-  (let ((keymap (make-sparse-keymap))
-	(action (if (functionp function)
-		    (if screen
-			`(lambda (e)
-			   (interactive "e")
-			   (funcall ',function ,screen))
-		      `(lambda (e)
-			 (interactive "e")
-			 (funcall ',function)))
-		  'ignore)))
-    (define-key keymap [header-line down-mouse-1] 'ignore)
-    (define-key keymap [header-line down-mouse-2] 'ignore)
-    (define-key keymap [header-line drag-mouse-1] 'ignore)
-    (define-key keymap [header-line drag-mouse-2] 'ignore)
-    (define-key keymap [header-line mouse-1] action)
-    (define-key keymap [header-line mouse-2] action)
-    keymap))
 
 
 ; Menu & Tab for GNU Emacs 21
@@ -838,9 +862,28 @@ buffer-name and corresponding screen-name."
       (define-key (current-global-map) [menu-bar elscreen]
 	(cons (copy-sequence "ElScreen") elscreen-menu)))))
 
+(defsubst elscreen-e21-tab-create-keymap (&optional function screen)
+  (let ((keymap (make-sparse-keymap))
+	(action (if (functionp function)
+		    (if screen
+			`(lambda (e)
+			   (interactive "e")
+			   (funcall ',function ,screen))
+		      `(lambda (e)
+			 (interactive "e")
+			 (funcall ',function)))
+		  'ignore)))
+    (define-key keymap [header-line down-mouse-1] 'ignore)
+    (define-key keymap [header-line down-mouse-2] 'ignore)
+    (define-key keymap [header-line drag-mouse-1] 'ignore)
+    (define-key keymap [header-line drag-mouse-2] 'ignore)
+    (define-key keymap [header-line mouse-1] action)
+    (define-key keymap [header-line mouse-2] action)
+    keymap))
+
 (defmacro elscreen-e21-tab-append (property)
-  ( `(setq header-line-format (append header-line-format
-				      (list (, property))))))
+  ( `(setq elscreen-tab-format (append elscreen-tab-format
+				       (list (, property))))))
 
 (defun elscreen-e21-tab-update (&optional force)
   (when (and (not (window-minibuffer-p))
@@ -859,13 +902,17 @@ buffer-name and corresponding screen-name."
 	   (or (and x (< x (nth 0 edges))) (setq x (nth 0 edges)))
 	   (or (and y (< y (nth 1 edges))) (setq y (nth 1 edges)))
 	   (set-buffer (window-buffer window))
-	   (setq header-line-format nil)
+	   (when (and (boundp 'elscreen-tab-format)
+		      (equal header-line-format elscreen-tab-format))
+	     (setq elscreen-tab-format nil)
+	     (setq header-line-format nil))
 	   )
 	 'other 'other)
 	(setq top-window (window-at x y)))
 
       (when elscreen-display-tab
 	(set-buffer (window-buffer top-window))
+	(set (make-local-variable 'elscreen-tab-format) nil)
 	(when elscreen-tab-display-create-screen
 	  (elscreen-e21-tab-append
 	   (propertize
@@ -910,13 +957,16 @@ buffer-name and corresponding screen-name."
 	   (propertize
 	    (make-string (window-width) ?\ )
 	    'face 'elscreen-tab-background-face
-	    'local-map (elscreen-e21-tab-create-keymap)))))))
-  
+	    'local-map (elscreen-e21-tab-create-keymap)))
+
+          (unless (equal elscreen-tab-format header-line-format)
+	    (setq header-line-format elscreen-tab-format))))))
+
 (when elscreen-on-emacs
-  (elscreen-e21-tab-update t)
   (elscreen-e21-menu-bar-update t)
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update)
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update))
+  (elscreen-e21-tab-update t)
+  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
+  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update))
 
 ; Menu for XEmacs
 
@@ -996,7 +1046,7 @@ buffer-name and corresponding screen-name."
   "Go to the screen that has the window with buffer BUFNAME,
 creating one if none already exists."
   (interactive "BGo to the screen with specified buffer: ")
-  (elscreen-get-screen-create (get-buffer buffer)))
+  (elscreen-get-screen-create (get-buffer-create buffer)))
 
 (defun elscreen-find-file (filename)
   "Edit file FILENAME.
@@ -1027,8 +1077,7 @@ creating one if none already exists."
                                (format "%d M-x " (car prefix-arg)))
                               (t
                                "M-x ")))))
-  (if (< (elscreen-get-number-of-screens) 10)
-      (elscreen-create)
+  (unless (elscreen-create)
     (split-window)
     (other-window 1))
   (command-execute this-command t))

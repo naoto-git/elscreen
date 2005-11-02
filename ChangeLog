@@ -1,3 +1,28 @@
+2004-08-14  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.3.1 released.
+	
+	* (elscreen-save-screen-excursion): New macro.
+	* (elscreen-get-screen-create): Use
+	  `elscreen-save-screen-excursion'.
+	* (elscreen-get-screen-to-name-alist): Ditto.
+	
+
+2004-08-12  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-create): Return screen number if new screen is
+	  created, otherwise nil.
+	* (elscreen-kill): Return screen number if specified (or current)
+	  screen is successfully killed, otherwise nil.
+	* (elscreen-get-screen-create): Return screen number if existing
+	  screen is found or new screen is created, otherwise nil.
+	* (elscreen-e21-tab-update): If elscreen-display-tab is set to
+	  nil, set header-line-format to nil for each buffer only once.
+	* (elscreen-swap): New function.
+	* Set key-binding for `j' to `elscreen-link' instead of undefined
+	  `elscreen-join'.
+
+
 2004-08-06  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.3.0 released.

@@ -1,6 +1,6 @@
-ElScreen 1.3.0 README file
+ElScreen 1.3.1 README file
 
-This is the distribution of ElScreen 1.3.0, released August 2004. 
+This is the distribution of ElScreen 1.3.1, released August 2004. 
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on 
 terminal.
@@ -18,8 +18,8 @@ Files
 -----
 This package should contain the following files:
 
-    elscreen.el     ElScreen version 1.3.0 main file
-    README          Introduction to ElScreen 1.3.0 (this file)
+    elscreen.el     ElScreen version 1.3.1 main file
+    README          Introduction to ElScreen 1.3.1 (this file)
     ChangeLog       ElScreen ChangeLog file
 
 
