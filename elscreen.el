@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.2.1 (March 25, 2001)")
+(defconst elscreen-version "1.2.2 (September 19, 2001)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  March 25, 2001
+;; Revised:  September 19, 2001
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -297,22 +297,26 @@
       (elscreen-set-current-screen nil)
       (elscreen-goto next-screen)))))
 
-(defun elscreen-goto (next-screen) 
-  "Jump to the specified screen."
+(defun elscreen-goto (screen) 
   (interactive "NGoto screen number: ")
-  (if (elscreen-get-winconf next-screen)
+  (elscreen-goto0 screen)
+  (redraw-frame (selected-frame)))
+
+(defun elscreen-goto0 (screen)
+  "Jump to the specified screen."
+  (if (elscreen-get-winconf screen)
       (progn
 	(if (elscreen-get-current-screen)
 	    (elscreen-set-winconf (elscreen-get-current-screen)
 				  (current-window-configuration)))
 	(elscreen-set-previous-screen (elscreen-get-current-screen))
-	(elscreen-set-current-screen next-screen)
+	(elscreen-set-current-screen screen)
 	(delete-other-windows)
 	(switch-to-buffer elscreen-scratch-buffer)
 	(set-window-configuration
 	 (elscreen-get-winconf (elscreen-get-current-screen)))
 	(elscreen-mode-line-update))
-    (elscreen-message (format "No screen %d" next-screen))))
+    (elscreen-message (format "No screen %d" screen))))
 
 (defun elscreen-next () 
   "Switch to the next screen."
@@ -450,7 +454,7 @@
     (while (< i 10)
       (if (elscreen-get-winconf i)
 	  (progn
-	    (elscreen-goto i)
+	    (elscreen-goto0 i)
 	    (setq elscreen-buffer-names (elscreen-get-buffer-name-list))
 	    (setq elscreen-mode-names (elscreen-get-mode-list))
 	    (setq flag t)
@@ -485,7 +489,7 @@
 	     (set-alist 'elscreen-tmp-name-alist i elscreen-buffer-names))))
       (setq i (+ i 1)))
 	     ; making elscreen-list-message is completed.
-    (elscreen-goto elscreen-tmp-this-screen)
+    (elscreen-goto0 elscreen-tmp-this-screen)
     (elscreen-set-previous-screen elscreen-tmp-previous-screen)
     (setq i 0)
     (while (< i 10)

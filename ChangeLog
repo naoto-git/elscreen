@@ -1,6 +1,12 @@
+2001-09-19  Naoto Morishima  <naoto@morishima.net>
+
+	* ElScreen 1.2.2
+	* (elscreen-goto0): new function.
+	* (elscreen-goto): call redraw-frame.
+
 2001-03-25  Naoto Morishima  <moley@kyoto.wide.ad.jp>
 
-	* Support multiple frames
+	* Support multiple frames.
 
 2000-01-08  Naoto Morishima  <moley@kyoto.wide.ad.jp>	
 
