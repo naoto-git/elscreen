@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.3.3 (September 12, 2005)")
+(defconst elscreen-version "1.3.4 (October 8, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  September 12, 2005
+;; Revised:  October 8, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -299,6 +299,9 @@ buffer-name and corresponding screen-name."
 
 ; Window configuration handling
 
+(defun elscreen-current-window-configuration ()
+  (list (current-window-configuration) (point-marker)))
+
 (defvar elscreen-frame-confs nil
   "*Alist that contains the information about screen configurations.")
 
@@ -317,7 +320,7 @@ buffer-name and corresponding screen-name."
 				    (cons 'previous-screen nil)
 				    (cons 'modified-inquirer nil)))
 			(cons 'window-configuration
-			      (list (cons 0 (current-window-configuration))))
+			      (list (cons 0 (elscreen-current-window-configuration))))
 			(cons 'screen-nickname nil)))))
 
 (defun elscreen-delete-frame-confs (frame)
@@ -559,7 +562,7 @@ buffer-name and corresponding screen-name."
     nil)
    (t
     (elscreen-set-window-configuration (elscreen-get-current-screen)
-				       (current-window-configuration))
+				       (elscreen-current-window-configuration))
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
 	  (i 0))
@@ -570,7 +573,7 @@ buffer-name and corresponding screen-name."
     (switch-to-buffer elscreen-default-buffer-name)
     (elscreen-screen-number-string-update)
     (elscreen-set-window-configuration (elscreen-get-current-screen)
-				       (current-window-configuration))
+				       (elscreen-current-window-configuration))
     (elscreen-screen-modified)
     (run-hooks 'elscreen-create-hook)
     (elscreen-get-current-screen))))
@@ -611,7 +614,9 @@ buffer-name and corresponding screen-name."
 (defvar elscreen-goto-hook nil)
 
 (defsubst elscreen-goto-internal (screen)
-  (set-window-configuration (elscreen-get-window-configuration screen)))
+  (let* ((window-configuration (elscreen-get-window-configuration screen)))
+    (set-window-configuration (car window-configuration))
+    (goto-char (cadr window-configuration))))
 
 (defun elscreen-goto (screen) 
   "Jump to the specified screen."
@@ -621,7 +626,7 @@ buffer-name and corresponding screen-name."
    ((elscreen-screen-live-p screen)
     (if (elscreen-get-current-screen)
 	(elscreen-set-window-configuration (elscreen-get-current-screen)
-					   (current-window-configuration)))
+					   (elscreen-current-window-configuration)))
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
@@ -704,7 +709,7 @@ buffer-name and corresponding screen-name."
 
 (defun elscreen-get-screen-create (buffer)
   (elscreen-set-window-configuration (elscreen-get-current-screen)
-				     (current-window-configuration))
+				     (elscreen-current-window-configuration))
   (setq elscreen-screen-modified-hook-suppress t)
   (let* ((screen-list (sort (elscreen-get-screen-list) '<))
 	 (target-screen 
@@ -760,7 +765,7 @@ buffer-name and corresponding screen-name."
 
 (defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
   (elscreen-set-window-configuration (elscreen-get-current-screen)
-				     (current-window-configuration))
+				     (elscreen-current-window-configuration))
   (setq elscreen-screen-modified-hook-suppress t)
   (let* ((screen-list (sort (elscreen-get-screen-list) '<))
 	 (screen-name nil)

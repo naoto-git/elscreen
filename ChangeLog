@@ -1,4 +1,21 @@
-2004-09-12  Naoto Morishima  <naoto@morishima.net>
+2005-10-08  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.3.4 released.
+
+	From Yoshinori Koseki <kose@meadowy.org>:
+	* (elscreen-current-window-configuration): New function.  This
+	  returns current-window-configuration with point-maker of
+	  current-buffer.
+	* (elscreen-create): Use `elscreen-current-window-configuration'
+	  instead of `current-window-configuration'.
+	* (elscreen-goto): Ditto.
+	* (elscreen-get-screen-create): Ditto.
+	* (elscreen-get-screen-to-name-alist): Ditto.
+	* (elscreen-goto-internal): Restore saved point-maker in
+	  current-buffer in addition to window-configuration.
+
+
+2005-09-12  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.3.3 released.
 
