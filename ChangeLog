@@ -1,25 +1,29 @@
-ElScreen and ElScreen-GF Change log file
+2001-03-25  Naoto Morishima  <moley@kyoto.wide.ad.jp>
 
-Mon January 13 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+	* Support multiple frames
+
+2000-01-08  Naoto Morishima  <moley@kyoto.wide.ad.jp>	
+
+	* ElScreen 1.12
+	* Use APEL for alist operation, instead of proprietary alist
+	library. 
+
+1997-01-13  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
         * ElScreen 1.02 released.
 
-Sun January 12 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+1997-01-12  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
-        * ElScreen:
-          - fix the bug of setting 'global-mode-string'.
-          - change the way to set 'global-map'.
-          - delete function 'elscreen-suspend-emacs'.
-            use C-x C-z to suspend emacs.
-        * ElScreen-GF:
-          - fix the bug of setting 'global-mode-string'.
+	* Fix the bug of setting 'global-mode-string'.
+	* Change the way to set 'global-map'.
+	* Delete function 'elscreen-suspend-emacs'. use C-x C-z to suspend
+	emacs. 
 
-Wed January 8 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+1997-01-08  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
-        * ElScreen 1.01 released.
-        * ElScreen:
-          - add function 'elscreen-suspend-emacs'.
+	* ElScreen 1.01 released.
+	* Add function 'elscreen-suspend-emacs'.
 
-Tue January 7 1997   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+1997-01-07  Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 
-        * ElScreen 1.0 released.
+	* ElScreen 1.0 released.

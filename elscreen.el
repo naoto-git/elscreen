@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.02 (January 12, 1997)")
+(defconst elscreen-version "1.2.1 (March 25, 2001)")
 ;;
-;; Author:   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
+;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
-;; Based on: screens.el 
+;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  January 12, 1997
+;; Revised:  March 25, 2001
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -38,8 +38,7 @@
   "*If non-nil, show the number of the current screen in the mode line.")
 
 (defvar elscreen-buffer-to-screen-alist
-  '(("inbox\\|reply to\\|\\+draft\\|Mew" . "Mew")
-    ("Article\\|Subject\\|Newsgroup\\|Group\\|Summary" . "Gnus")
+  '(("Summary" . "Wanderlust")
     ("[Ss]hell" . "shell")
     ("compilation" . "compile")
     ("-telnet" . "telnet")
@@ -67,26 +66,17 @@
        (t
 	global-mode-string)))
 
-(defvar elscreen-confs-alist (list (cons 0 (current-window-configuration)))
+(defvar elscreen-confs-alist nil
   "*Alist that contains the information about screen configurations.")
 
 (defvar elscreen-name-alist nil
   "*List of window name specified by user.")
-
-(defvar elscreen-open-screens 1
-  "*How many screens are used.")
 
 (defvar elscreen-scratch-buffer "*scratch*"
   "*Buffer name of scratch-buffer.")
 
 (defvar elscreen-last-message "Welcome to ElScreen!"
   "*Last shown message.")
-
-(defvar elscreen-this-screen 0
-  "*Number of the current screen.")
-
-(defvar elscreen-previous-screen nil
-  "*Number of the previous screen.")
 
 (defvar elscreen-help "ElScreen keys:
        \\[elscreen-create]    Create a new screen         
@@ -125,18 +115,19 @@
 (define-key elscreen-map  "\C-a" 'elscreen-toggle)
 (define-key elscreen-map  "a"    'elscreen-toggle)
 (define-key elscreen-map  "g"    'elscreen-goto)
-(define-key elscreen-map  "0"    'elscreen-jump-0)
-(define-key elscreen-map  "1"    'elscreen-jump-1)
-(define-key elscreen-map  "2"    'elscreen-jump-2)
-(define-key elscreen-map  "3"    'elscreen-jump-3)
-(define-key elscreen-map  "4"    'elscreen-jump-4)
-(define-key elscreen-map  "5"    'elscreen-jump-5)
-(define-key elscreen-map  "6"    'elscreen-jump-6)
-(define-key elscreen-map  "7"    'elscreen-jump-7)
-(define-key elscreen-map  "8"    'elscreen-jump-8)
-(define-key elscreen-map  "9"    'elscreen-jump-9)
+(define-key elscreen-map  "0"    'elscreen-jump)
+(define-key elscreen-map  "1"    'elscreen-jump)
+(define-key elscreen-map  "2"    'elscreen-jump)
+(define-key elscreen-map  "3"    'elscreen-jump)
+(define-key elscreen-map  "4"    'elscreen-jump)
+(define-key elscreen-map  "5"    'elscreen-jump)
+(define-key elscreen-map  "6"    'elscreen-jump)
+(define-key elscreen-map  "7"    'elscreen-jump)
+(define-key elscreen-map  "8"    'elscreen-jump)
+(define-key elscreen-map  "9"    'elscreen-jump)
 (define-key elscreen-map  "?"    'elscreen-help)
 (define-key elscreen-map  "\C-f" 'elscreen-find-file)
+(define-key elscreen-map  "b"    'elscreen-switch-to-buffer)
 (define-key elscreen-map  "w"    'elscreen-show-list)
 (define-key elscreen-map  "m"    'elscreen-show-last-message)
 (define-key elscreen-map  "t"    'elscreen-show-time)
@@ -146,8 +137,8 @@
 (define-key elscreen-map  "l"    'elscreen-link)
 (define-key elscreen-map  "s"    'elscreen-split)
 
-(add-hook 'minibuffer-setup-hook 'elscreen-minibuffer-setup)
-(add-hook 'minibuffer-exit-hook 'elscreen-minibuffer-exit)
+;(add-hook 'minibuffer-setup-hook 'elscreen-minibuffer-setup)
+;(add-hook 'minibuffer-exit-hook 'elscreen-minibuffer-exit)
 
 (defun elscreen-minibuffer-setup ()
   "Disable elscreen-prefix-key when minibuffer become active."
@@ -160,6 +151,94 @@
 ;
 ; code
 ;
+(defun get-alist (key alist)
+  (cdr (assoc key alist)))
+
+(defun elscreen-alloc-confs (frame)
+  (set-alist 'elscreen-confs-alist
+	     frame (list (list 1 0 nil)
+			 (list (cons 0 (current-window-configuration))))))
+
+(defun elscreen-free-confs (frame)
+  (remove-alist 'elscreen-confs-alist frame))
+
+(add-hook 'create-frame-hook 'elscreen-alloc-confs)
+(add-hook 'delete-frame-hook 'elscreen-free-confs)
+(elscreen-alloc-confs (selected-frame))
+
+(defun elscreen-get-status-list (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (nth 0 (get-alist frame elscreen-confs-alist))))
+
+(defun elscreen-status-index (status)
+  (cond
+   ((eq status 'open-screens) 0)
+   ((eq status 'current-screen) 1)
+   ((eq status 'previous-screen) 2)
+   (t -1)))
+
+(defun elscreen-get-status (status &optional frame)
+  (let* ((frame (or frame (selected-frame)))
+	 (status-list (elscreen-get-status-list frame))
+	 (status-index (elscreen-status-index status)))
+    (nth status-index status-list)))
+
+(defun elscreen-set-status (status value &optional frame)
+  (let* ((frame (or frame (selected-frame)))
+	 (status-list (elscreen-get-status-list frame))
+	 (winconfs-alist (elscreen-get-winconfs-alist frame))
+	 (status-index (elscreen-status-index status)))
+    (setcar (nthcdr status-index status-list) value)
+    (set-alist 'elscreen-confs-alist frame (list status-list winconfs-alist))))
+
+(defun elscreen-get-open-screens (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-get-status 'open-screens frame)))
+
+(defun elscreen-set-open-screens (open-screens-value &optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-set-status 'open-screens open-screens-value)))
+
+(defun elscreen-get-current-screen (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-get-status 'current-screen)))
+
+(defun elscreen-set-current-screen (current-screen-value &optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-set-status 'current-screen current-screen-value)))
+
+(defun elscreen-get-previous-screen (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-get-status 'previous-screen)))
+
+(defun elscreen-set-previous-screen (previous-screen-value &optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-set-status 'previous-screen previous-screen-value)))
+
+(defun elscreen-get-winconfs-alist (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (nth 1 (get-alist frame elscreen-confs-alist))))
+
+(defun elscreen-set-winconfs-alist (winconfs-alist &optional frame)
+  (let* ((frame (or frame (selected-frame)))
+	 (status-list (elscreen-get-status-list frame)))
+    (set-alist 'elscreen-confs-alist frame (list status-list winconfs-alist))))
+
+(defun elscreen-get-winconf (screen &optional frame)
+  (get-alist screen (elscreen-get-winconfs-alist frame)))
+
+(defun elscreen-set-winconf (screen winconf &optional frame)
+  (let* ((frame (or frame (selected-frame)))
+	 (winconfs-alist (elscreen-get-winconfs-alist frame)))
+    (set-alist 'winconfs-alist screen winconf)
+    (elscreen-set-winconfs-alist winconfs-alist frame)))
+
+(defun elscreen-remove-winconf (screen &optional frame)
+  (let* ((frame (or frame (selected-frame)))
+	 (winconfs-alist (elscreen-get-winconfs-alist frame)))
+    (remove-alist 'winconfs-alist screen)
+    (elscreen-set-winconfs-alist winconfs-alist frame)))
+
 (defun elscreen-minibuffer-message ()
   "Show message when minibuffer is active."
   (interactive)
@@ -169,192 +248,184 @@
   "Create a new screen."
   (interactive)
       (cond
-       ((>= elscreen-open-screens 10)
+       ((>= (elscreen-get-open-screens) 10)
 	(elscreen-message "Can't create any more screen"))
        (t
-	(asput 'elscreen-confs-alist
-	      elscreen-this-screen
-	      (current-window-configuration))
-	(setq elscreen-open-screens (+ elscreen-open-screens 1))
+	(elscreen-set-winconf (elscreen-get-current-screen)
+			      (current-window-configuration))
+	(elscreen-set-open-screens (1+ (elscreen-get-open-screens)))
 	(let ((i 0)
 	      (flag t))
 	  (while (and flag (< i 9))
-	    (if (not (asget elscreen-confs-alist i))
+	    (if (not (elscreen-get-winconf i))
 		(progn
-		  (setq elscreen-previous-screen elscreen-this-screen)
+		  (elscreen-set-previous-screen (elscreen-get-current-screen))
 		  (setq flag nil))
 	      (setq i (+ i 1))))
-	  (setq elscreen-this-screen i))
+	  (elscreen-set-current-screen i))
 	(delete-other-windows) 
 	(switch-to-buffer elscreen-scratch-buffer)
 	(lisp-interaction-mode)
 	(elscreen-mode-line-update)
-	(asput 'elscreen-confs-alist
-	      elscreen-this-screen
-	      (current-window-configuration)))))
+	(elscreen-set-winconf (elscreen-get-current-screen)
+			      (current-window-configuration)))))
 
 (defun elscreen-kill () 
   "Kill the current screen."
   (interactive)
   (cond
-   ((= elscreen-open-screens 1)
-    (elscreen-message "There is only one screen, can't kill"))
+   ((= (elscreen-get-open-screens) 1)
+    (elscreen-message "There is only one screen, cannot kill"))
    (t 
-    (setq elscreen-open-screens (- elscreen-open-screens 1))
-    (asdelete 'elscreen-confs-alist elscreen-this-screen)
-    (if (asget elscreen-name-alist elscreen-this-screen)
-	(asdelete 'elscreen-name-alist elscreen-this-screen))
+    (elscreen-set-open-screens (1- (elscreen-get-open-screens)))
+    (elscreen-remove-winconf (elscreen-get-current-screen))
+    (if (get-alist (elscreen-get-current-screen) elscreen-name-alist)
+	(del-alist (elscreen-get-current-screen) elscreen-name-alist))
     (let ((i 0)
 	  (flag t)
-	  (elscreen-next-screen))
-      (if elscreen-previous-screen
-	  (setq elscreen-next-screen elscreen-previous-screen)
-	(setq elscreen-next-screen elscreen-this-screen)
+	  (next-screen))
+      (if (elscreen-get-previous-screen)
+	  (setq next-screen (elscreen-get-previous-screen))
+	(setq next-screen (elscreen-get-current-screen))
 	(while (and flag (< i 9))
-	  (setq elscreen-next-screen (+ elscreen-next-screen 1))
-	  (if (< 9 elscreen-next-screen)
-	      (setq elscreen-next-screen 0))
-	  (if (asget elscreen-confs-alist elscreen-next-screen)
+	  (setq next-screen (+ next-screen 1))
+	  (if (< 9 next-screen)
+	      (setq next-screen 0))
+	  (if (elscreen-get-winconf next-screen)
 	      (setq flag nil)
 	    (setq i (+ i 1)))))
-      (setq elscreen-this-screen nil)
-      (elscreen-goto elscreen-next-screen)))))
+      (elscreen-set-current-screen nil)
+      (elscreen-goto next-screen)))))
 
-(defun elscreen-goto (elscreen-next-screen) 
+(defun elscreen-goto (next-screen) 
   "Jump to the specified screen."
-  (interactive "nGoto screen number:")
-  (if (asget elscreen-confs-alist elscreen-next-screen)
+  (interactive "NGoto screen number: ")
+  (if (elscreen-get-winconf next-screen)
       (progn
-	(if elscreen-this-screen
-	    (asput 'elscreen-confs-alist
-		  elscreen-this-screen
-		  (current-window-configuration)))
-	(setq elscreen-previous-screen elscreen-this-screen)
-	(setq elscreen-this-screen elscreen-next-screen)
+	(if (elscreen-get-current-screen)
+	    (elscreen-set-winconf (elscreen-get-current-screen)
+				  (current-window-configuration)))
+	(elscreen-set-previous-screen (elscreen-get-current-screen))
+	(elscreen-set-current-screen next-screen)
 	(delete-other-windows)
 	(switch-to-buffer elscreen-scratch-buffer)
 	(set-window-configuration
-	 (asget elscreen-confs-alist elscreen-this-screen))
+	 (elscreen-get-winconf (elscreen-get-current-screen)))
 	(elscreen-mode-line-update))
-    (elscreen-message (concat "No screen " elscreen-next-screen))))
+    (elscreen-message (format "No screen %d" next-screen))))
 
 (defun elscreen-next () 
   "Switch to the next screen."
   (interactive)
-  (asput 'elscreen-confs-alist
-	elscreen-this-screen
-	(current-window-configuration))
+  (elscreen-set-winconf (elscreen-get-current-screen)
+			(current-window-configuration))
   (let ((i 0)
 	(flag t)
-	(elscreen-next-screen elscreen-this-screen))
+	(next-screen (elscreen-get-current-screen)))
     (while (and flag (< i 10))
-      (setq elscreen-next-screen (+ elscreen-next-screen 1))
-      (if (< 9 elscreen-next-screen)
-	  (setq elscreen-next-screen 0))
-      (if (asget elscreen-confs-alist elscreen-next-screen)
+      (setq next-screen (1+ next-screen))
+      (if (< 9 next-screen)
+	  (setq next-screen 0))
+      (if (elscreen-get-winconf next-screen)
 	  (setq flag nil))
-      (setq i (+ i 1)))
+      (setq i (1+ i)))
     (cond
-     ((eq elscreen-next-screen elscreen-this-screen)
+     ((eq next-screen (elscreen-get-current-screen))
       (elscreen-message 
-       (concat "You connot escape from screen " elscreen-this-screen "!")))
+       (format "You cannot escape from screen %d!"
+	       (elscreen-get-current-screen))))
      (t
-      (elscreen-goto elscreen-next-screen)))))
+      (elscreen-goto next-screen)))))
 
 (defun elscreen-previous () 
   "Switch to the previous screen."
   (interactive)
-  (asput 'elscreen-confs-alist
-	elscreen-this-screen
-	(current-window-configuration))
+  (elscreen-set-winconf (elscreen-get-current-screen)
+			(current-window-configuration))
   (let ((i 0)
 	(flag t)
-	(elscreen-next-screen elscreen-this-screen))
+	(next-screen (elscreen-get-current-screen)))
     (while (and flag (< i 10))
-      (setq i (+ i 1))
-      (setq elscreen-next-screen (- elscreen-next-screen 1))
-      (if (< elscreen-next-screen 0)
-	  (setq elscreen-next-screen 9))
-      (if (asget elscreen-confs-alist elscreen-next-screen)
+      (setq i (1+ i))
+      (setq next-screen (1- next-screen))
+      (if (< next-screen 0)
+	  (setq next-screen 9))
+      (if (elscreen-get-winconf next-screen)
 	  (setq flag nil)))
     (cond
-     ((eq elscreen-next-screen elscreen-this-screen)
+     ((eq next-screen (elscreen-get-current-screen))
       (elscreen-message 
-       (concat "You connot escape from screen " elscreen-this-screen "!")))
+       (format "You cannot escape from screen %d!"
+	       (elscreen-get-current-screen))))
      (t
-      (elscreen-goto elscreen-next-screen)))))
+      (elscreen-goto next-screen)))))
 
 (defun elscreen-toggle ()
   "Toggle to last screen."
     (interactive)
     (cond
-     ((= elscreen-open-screens 1)
+     ((= (elscreen-get-open-screens) 1)
       (elscreen-message 
-       (concat "You connot escape from screen " elscreen-this-screen "!")))
-     (elscreen-previous-screen
-      (elscreen-goto elscreen-previous-screen))
+       (format "You cannot escape from screen %d!"
+	       (elscreen-get-current-screen))))
+     ((elscreen-get-previous-screen)
+      (elscreen-goto (elscreen-get-previous-screen)))
      (t
       (let ((i 0)
 	    (flag t)
-	    (elscreen-next-screen elscreen-this-screen))
+	    (next-screen (elscreen-get-current-screen)))
 	(while (and flag (< i 10))
-	  (setq elscreen-next-screen (+ elscreen-next-screen 1))
-	  (if (< 9 elscreen-next-screen)
-	      (setq elscreen-next-screen 0))
-	  (if (asget elscreen-confs-alist elscreen-next-screen)
+	  (setq next-screen (1+ next-screen))
+	  (if (< 9 next-screen)
+	      (setq next-screen 0))
+	  (if (elscreen-get-winconf next-screen)
 	      (setq flag nil))
-	  (setq i (+ i 1)))
-	(elscreen-goto elscreen-next-screen)))))
+	  (setq i (1+ i)))
+	(elscreen-goto next-screen)))))
       
-(defun elscreen-jump-0 ()
-  "Switch to the screen 0."
+(defun elscreen-jump ()
+  "Switch to specified screen."
   (interactive)
-  (elscreen-goto 0))
+  (let ((next-screen (string-to-number (string last-command-char))))
+    (if (not (or (< 9 next-screen)
+		 (< next-screen 0)))
+	(elscreen-goto next-screen))))
 
-(defun elscreen-jump-1 ()
-  "Switch to the screen 1."
-  (interactive)
-  (elscreen-goto 1))
+(defun elscreen-get-screen-buffer-list ()
+  (let ((screen-buffer-list nil))
+    (walk-windows
+     '(lambda (window)
+	(add-to-list 'screen-buffer-list (current-buffer)))
+     'other 'other)
+    screen-buffer-list))
 
-(defun elscreen-jump-2 ()
-  "Switch to the screen 2."
-  (interactive)
-  (elscreen-goto 2))
 
-(defun elscreen-jump-3 ()
-  "Switch to the screen 3."
-  (interactive)
-  (elscreen-goto 3))
-
-(defun elscreen-jump-4 ()
-  "Switch to the screen 4."
-  (interactive)
-  (elscreen-goto 4))
-
-(defun elscreen-jump-5 ()
-  "Switch to the screen 5."
-  (interactive)
-  (elscreen-goto 5))
-
-(defun elscreen-jump-6 ()
-  "Switch to the screen 6."
-  (interactive)
-  (elscreen-goto 6))
-
-(defun elscreen-jump-7 ()
-  "Switch to the screen 7."
-  (interactive)
-  (elscreen-goto 7))
-
-(defun elscreen-jump-8 ()
-  "Switch to the screen 8."
-  (interactive)
-  (elscreen-goto 8))
-
-(defun elscreen-jump-9 ()
-  "Switch to the screen 9."
-  (interactive)
-  (elscreen-goto 9))
+(defun elscreen-get-screen-create (buffer)
+  (let ((current-screen (elscreen-get-current-screen))
+	(previous-screen (elscreen-get-previous-screen))
+	(target-screen nil)
+	(flag t)
+	(i 0))
+    (while (and flag (< i 10))
+      (if (and (elscreen-get-winconf i)
+	       (elscreen-goto i))
+	  (if (member buffer (elscreen-get-screen-buffer-list))
+	      (progn
+		(setq target-screen i)
+		(setq flag nil))))
+      (setq i (+ i 1)))
+    (elscreen-goto current-screen)
+    (elscreen-set-previous-screen previous-screen)
+    (if target-screen
+	(progn
+	  (elscreen-goto target-screen)
+	  (select-window (get-buffer-window buffer)))
+      (if (< (elscreen-get-open-screens) 10)
+	  (progn
+	    (elscreen-create)
+	    (switch-to-buffer buffer))
+	(split-window)
+	(switch-to-buffer-other-window buffer)))))
 
 
 (defun elscreen-number-mode-line ()
@@ -364,12 +435,11 @@
   (elscreen-mode-line-update)
   (switch-to-buffer (current-buffer)))
 
-
 (defun elscreen-show-list ()
   "Show list of screens."
   (interactive)
-  (let ((elscreen-tmp-this-screen elscreen-this-screen)
-	(elscreen-tmp-previous-screen elscreen-previous-screen)
+  (let ((elscreen-tmp-this-screen (elscreen-get-current-screen))
+	(elscreen-tmp-previous-screen (elscreen-get-previous-screen))
 	(elscreen-list-message nil)
 	(elscreen-tmp-name-alist nil)
 	(elscreen-buffer-names nil)
@@ -378,10 +448,10 @@
 	(j)
 	(flag))
     (while (< i 10)
-      (if (asget elscreen-confs-alist i)
+      (if (elscreen-get-winconf i)
 	  (progn
 	    (elscreen-goto i)
-	    (setq elscreen-buffer-names (elscreen-get-buffer-list))
+	    (setq elscreen-buffer-names (elscreen-get-buffer-name-list))
 	    (setq elscreen-mode-names (elscreen-get-mode-list))
 	    (setq flag t)
 	    (or
@@ -392,8 +462,9 @@
 		      (car (nth j elscreen-buffer-to-screen-alist))
 		      elscreen-buffer-names)
 		     (progn
-		       (asput 'elscreen-tmp-name-alist i
-			     (cdr (nth j elscreen-buffer-to-screen-alist)))
+		       (set-alist
+			'elscreen-tmp-name-alist
+			i (cdr (nth j elscreen-buffer-to-screen-alist)))
 		       (setq flag nil)))
 		 (setq j (+ j 1)))
 	       (null flag))
@@ -404,32 +475,36 @@
 		      (car (nth j elscreen-mode-to-screen-alist))
 		      elscreen-mode-names)
 		     (progn
-		       (asput 'elscreen-tmp-name-alist i
-			     (cdr (nth j elscreen-mode-to-screen-alist)))
+		       (put-alist
+			'elscreen-tmp-name-alist
+			i (cdr (nth j elscreen-mode-to-screen-alist)))
 		       (setq flag nil)))
 		 (setq j (+ j 1)))
 	       (null flag))
 	     ; neither buffer-name and mode-name didn't give it...
-	     (asput 'elscreen-tmp-name-alist i elscreen-buffer-names))))
+	     (set-alist 'elscreen-tmp-name-alist i elscreen-buffer-names))))
       (setq i (+ i 1)))
 	     ; making elscreen-list-message is completed.
     (elscreen-goto elscreen-tmp-this-screen)
-    (setq elscreen-previous-screen elscreen-tmp-previous-screen)
+    (elscreen-set-previous-screen elscreen-tmp-previous-screen)
     (setq i 0)
     (while (< i 10)
-      (if (asget elscreen-confs-alist i)
-	  (setq elscreen-list-message
-		(concat elscreen-list-message i 
-			(or (and (eq i elscreen-this-screen) "+")
-			    (and (eq i elscreen-previous-screen) "-"))
-			" "
-			(or (asget elscreen-name-alist i)
-			    (asget elscreen-tmp-name-alist i))
+      (if (elscreen-get-winconf i)
+          (setq elscreen-list-message
+		(concat elscreen-list-message
+			(format "%d%s %s" i
+				(or (and (eq i (elscreen-get-current-screen))
+					 "+")
+				    (and (eq i (elscreen-get-previous-screen))
+					 "-")
+				    "")
+				(or (get-alist i elscreen-name-alist)
+				    (get-alist i elscreen-tmp-name-alist)))
 			"  ")))
       (setq i (+ i 1)))
     (elscreen-message elscreen-list-message)))
 
-(defun elscreen-get-buffer-list ()
+(defun elscreen-get-buffer-name-list ()
   (let ((org-window (selected-window))
 	(buffer-list (buffer-name)))
     (while (progn (other-window 1)
@@ -449,9 +524,9 @@
 (defun elscreen-name (new-name)
   "Specify screen name."
   (interactive "sSet window's title to: ")
-  (asput 'elscreen-name-alist elscreen-this-screen new-name)
+  (set-alist 'elscreen-name-alist (elscreen-get-current-screen) new-name)
   (if (eq (length new-name) 0)
-      (asdelete 'elscreen-name-alist elscreen-this-screen)))
+      (del-alist (elscreen-get-current-screen) elscreen-name-alist)))
 
 
 (defun elscreen-find-file (filename)
@@ -459,77 +534,13 @@
 Switch to a screen visiting file FILENAME,
 creating one if none already exists."
   (interactive "FFind file in new screen: ")
-  (let ((elscreen-tmp-this-screen elscreen-this-screen)
-	(elscreen-tmp-previous-screen elscreen-previous-screen)
-	(elscreen-target-screen nil)
-	(flag t)
-	(i 0))
-    (while (and flag (< i 10))
-      (if (and (asget elscreen-confs-alist i)
-	       (elscreen-goto i))
-	  (if (member
-	       (file-truename (expand-file-name filename))
-	       (elscreen-get-ab-file-list))
-	      (progn
-		(setq elscreen-target-screen i)
-		(setq flag nil))))
-      (setq i (+ i 1)))
-    (if elscreen-target-screen
-	(progn
-	  (elscreen-goto elscreen-target-screen)
-	  (select-window
-	   (get-buffer-window (file-name-nondirectory filename))))
-      (if (< elscreen-open-screens 10)
-	  (progn
-	    (elscreen-create)
-	    (find-file filename))
-	(elscreen-goto elscreen-tmp-this-screen)
-	(find-file-other-window filename)
-	(setq elscreen-tmp-this-screen elscreen-tmp-previous-screen)))
-    (setq elscreen-previous-screen elscreen-tmp-this-screen)))
+  (elscreen-get-screen-create (find-file-noselect filename)))
 
-(defun elscreen-get-ab-file-list ()
-  (let ((org-window (selected-window))
-	(ab-file-list (list (and (buffer-file-name)
-				 (file-truename (buffer-file-name))))))
-    (while (progn (other-window 1)
-		  (not (eq org-window (selected-window))))
-      (setq ab-file-list (nconc ab-file-list
-				(list (and (buffer-file-name)
-					   (file-truename
-					    (buffer-file-name)))))))
-    ab-file-list))
-
-
-(defun elscreen-get-screen-create (name)
-  (let ((elscreen-tmp-this-screen elscreen-this-screen)
-	(elscreen-tmp-previous-screen elscreen-previous-screen)
-	(elscreen-target-screen nil)
-	(flag t)
-	(i 0))
-    (while (and flag (< i 10))
-      (if (and (asget elscreen-confs-alist i)
-	       (elscreen-goto i))
-	  (if (string-match
-	       name
-	       (elscreen-get-buffer-list))
-	      (progn
-		(setq elscreen-target-screen i)
-		(setq flag nil))))
-      (setq i (+ i 1)))
-    (if elscreen-target-screen
-	(progn
-	  (elscreen-goto elscreen-target-screen)
-	  (set-buffer (get-buffer name)))
-      (if (< elscreen-open-screens 10)
-	  (progn
-	    (elscreen-create)
-	    (switch-to-buffer name))
-	(elscreen-goto elscreen-tmp-this-screen)
-	(setq elscreen-tmp-this-screen elscreen-tmp-previous-screen)
-	(switch-to-buffer-other-window name)))
-    (setq elscreen-previous-screen elscreen-tmp-this-screen)))
-
+(defun elscreen-switch-to-buffer (buffer)
+  "Switch to a screen that has the window with buffer BUFNAME,
+creating one if none already exists."
+  (interactive "BSwitch to buffer in new screen: ")
+  (elscreen-get-screen-create (get-buffer buffer)))
 
 (defun elscreen-help () 
   "Help about screen functions."
@@ -569,8 +580,10 @@ creating one if none already exists."
 
 
 (defun elscreen-mode-line-update () 
-  (setq elscreen-mode-line (and elscreen-show-screen-number
-				(concat "[" elscreen-this-screen "] "))))
+  (setq elscreen-mode-line
+	(and elscreen-show-screen-number
+	     (format "[%d]" (elscreen-get-current-screen)))))
+  
 
 (defun elscreen-message (message &optional sec)
   (setq elscreen-last-message message)
@@ -586,12 +599,12 @@ creating one if none already exists."
   (cond
    ((null (one-window-p))
     (elscreen-message "current screen must not have two or more window!"))
-   ((or (null elscreen-previous-screen)
-	(= elscreen-open-screens 1))
+   ((or (null (elscreen-get-previous-screen))
+	(= (elscreen-get-open-screens) 1))
     (elscreen-message "must specify previous screen!"))
-   ((and (elscreen-goto elscreen-previous-screen)
+   ((and (elscreen-goto (elscreen-get-previous-screen))
 	 (null (one-window-p)))
-    (elscreen-goto elscreen-previous-screen)
+    (elscreen-goto (elscreen-get-previous-screen))
     (elscreen-message "previous screen must not have two or more window!"))
    (t
     (let ((elscreen-link-buffer (current-buffer)))
@@ -601,10 +614,10 @@ creating one if none already exists."
 (defun elscreen-split ()
   (interactive)
   (if (and (null (one-window-p))
-	   (< elscreen-open-screens 10))
+	   (< (elscreen-get-open-screens) 10))
       (let ((elscreen-split-buffer (current-buffer)))
 	(delete-window)
 	(elscreen-create)
 	(switch-to-buffer elscreen-split-buffer)
-	(elscreen-goto elscreen-previous-screen))
+	(elscreen-goto (elscreen-get-previous-screen)))
     (elscreen-message "cannot split screen!")))

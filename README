@@ -1,32 +1,34 @@
-ElScreen 1.02 README file
+ElScreen 1.2 README file
 
-This is the distribution of ElScreen 1.02, released January 1997.
-It is an Emacs utility with which you can have multiple screens on
-your GNU Emacs as well as GNU screen on shell. 
+This is the distribution of ElScreen 1.2, released March 2001.
+It is an Emacs utility with which you can have multiple screens
+(window-configuration) on your GNU Emacs as well as GNU screen on
+shell. 
 
-If you use emacs-lisp applications which have many windows(like gnus,
-irchat, mew...)  ElScreen makes it easy to switch to a different
-screen, with its configuration unchanged. You can also create and kill 
-screen, jump to them, rename the screen, and so on.
+If you use emacs-lisp applications which have many windows(like Gnus,
+irchat, Wanderlust, mew...)  ElScreen makes it easy to switch to a
+different screen, with its configuration unchanged. You can also create
+and kill screen, jump to them, rename the screen, and so on.
 
-This is tested on mule2.3, which is based on GNU Emacs 19.28.500 and
-19.31.2. 
+This version is developed on XEmacs 21.1.14, with APEL 10.3.
 
 Files
 -----
 This package should contain the following files:
 
     elscreen.el     ElScreen version 1.02 main file
-    alist.el        Association list utilities version 0.1
-    elscreen-gf/    Emacs interface to GNU id-utils on ElScreen
     README          Introduction to ElScreen 1.02 (this file)
     ChangeLog       ElScreen and ElScreen-GF Change log file
     THANKS          ElScreen and ElScreen-GF Thanks file
 
-Instllation
+Installation
 -----------
-To use ElScreen, simply install .el files in this directory to your
-load-path, and put following line into your .emacs:
+To use ElScreen, APEL is required.  You will find it at
+
+  ftp://ftp.m17n.org/pub/mule/apel/
+
+Then, simply install .el files in this directory to your load-path,
+and put following line into your .emacs:
 
     (load "elscreen" "ElScreen" t)
 
@@ -79,14 +81,15 @@ Where Can I Get ElScreen?
 -------------------------
 ElScreen is available from the following anonymous ftp site.
 
-       ftp://ftp.kyoto.wide.ad.jp/pub/misc/elscreen/
+       ftp://ftp.morishima.net/pub/morishima.net/naoto/ElScreen/
 
 Bugs
 ----
-Multiple frames are not supported.
+Under multiple-frame environment, screen numbers displayed on mode line
+of each frame is changed at the same time.
 
 Bug Reports
 -----------
 Please mail bug reports and any comments to:
 
-       naoto-m@is.aist-nara.ac.jp
+       naoto@morishima.net
