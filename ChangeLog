@@ -1,17 +1,25 @@
+2005-10-17  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.3.5 released.
+
+	* (elscreen-goto-internal): Restore saved point-marker only when
+	  the stored marker is alive.
+
+
 2005-10-08  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.3.4 released.
 
 	From Yoshinori Koseki <kose@meadowy.org>:
 	* (elscreen-current-window-configuration): New function.  This
-	  returns current-window-configuration with point-maker of
+	  returns current-window-configuration with point-marker of
 	  current-buffer.
 	* (elscreen-create): Use `elscreen-current-window-configuration'
 	  instead of `current-window-configuration'.
 	* (elscreen-goto): Ditto.
 	* (elscreen-get-screen-create): Ditto.
 	* (elscreen-get-screen-to-name-alist): Ditto.
-	* (elscreen-goto-internal): Restore saved point-maker in
+	* (elscreen-goto-internal): Restore saved point-marker in
 	  current-buffer in addition to window-configuration.
 
 

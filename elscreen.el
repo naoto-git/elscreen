@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.3.4 (October 8, 2005)")
+(defconst elscreen-version "1.3.5 (October 17, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  October 8, 2005
+;; Revised:  October 17, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -614,9 +614,10 @@ buffer-name and corresponding screen-name."
 (defvar elscreen-goto-hook nil)
 
 (defsubst elscreen-goto-internal (screen)
-  (let* ((window-configuration (elscreen-get-window-configuration screen)))
+  (let* ((window-configuration (elscreen-get-window-configuration screen))
+	 (marker (cadr window-configuration)))
     (set-window-configuration (car window-configuration))
-    (goto-char (cadr window-configuration))))
+    (and (marker-buffer marker) (goto-char marker))))
 
 (defun elscreen-goto (screen) 
   "Jump to the specified screen."
