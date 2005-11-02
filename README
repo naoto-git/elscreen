@@ -1,6 +1,6 @@
-ElScreen 1.3.2 README file
+ElScreen 1.3.3 README file
 
-This is the distribution of ElScreen 1.3.2, released August 2004. 
+This is the distribution of ElScreen 1.3.3, released September 2005. 
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on 
 terminal.
@@ -11,15 +11,15 @@ switch to a different screen, with its configuration unchanged.
 You can also create and kill screen, jump to them, rename the
 screen, and so on.
 
-This version is developed on Emacs 21.3.50, with APEL 10.6.
+This version is developed on (Carbon) Emacs 22.0.50, with APEL 10.6.
 
 
 Files
 -----
 This package should contain the following files:
 
-    elscreen.el     ElScreen version 1.3.2 main file
-    README          Introduction to ElScreen 1.3.2 (this file)
+    elscreen.el     ElScreen version 1.3.3 main file
+    README          Introduction to ElScreen 1.3.3 (this file)
     ChangeLog       ElScreen ChangeLog file
 
 

@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.3.2 (August 23, 2004)")
+(defconst elscreen-version "1.3.3 (September 12, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 23, 2004
+;; Revised:  September 12, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -366,8 +366,11 @@ buffer-name and corresponding screen-name."
     (elscreen-set-status 'previous-screen value frame)))
 
 (defvar elscreen-screen-update-hook nil)
-(add-hook 'post-command-hook (lambda ()
-			       (run-hooks 'elscreen-screen-update-hook)))
+(add-hook 'post-command-hook
+	  (lambda ()
+	    (setq elscreen-screen-modified-hook-suppress t)
+	    (run-hooks 'elscreen-screen-update-hook)
+	    (setq elscreen-screen-modified-hook-suppress nil)))
 
 (defun elscreen-screen-modified-p (inquirer &optional frame)
   (let* ((frame (or frame (selected-frame)))
@@ -487,16 +490,23 @@ buffer-name and corresponding screen-name."
 
 (defmacro elscreen-save-screen-excursion (&rest body)
   (` (let ((original-buffer-list (buffer-list))
+	   (original-buffer-live-p nil)
 	   (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
        (unwind-protect
-	   (progn
+	   (save-excursion
 	     (,@ body))
 	 (setq elscreen-frame-confs original-frame-confs)
 	 (elscreen-goto-internal (elscreen-get-current-screen))
 	 (elscreen-screen-number-string-update)
-	 (while original-buffer-list
-	   (bury-buffer (car original-buffer-list))
-	   (setq original-buffer-list (cdr original-buffer-list)))))))
+	 (mapcar
+	  (lambda (buffer)
+	    (when (buffer-live-p buffer)
+	      (bury-buffer buffer)
+	      (setq original-buffer-live-p t)))
+	  original-buffer-list)
+	 (when original-buffer-live-p
+	   (while (not (memq (car (buffer-list)) original-buffer-list))
+	     (bury-buffer (car (buffer-list)))))))))
 
 
 ; Display message in minibuffers
@@ -906,15 +916,21 @@ buffer-name and corresponding screen-name."
 	 (lambda (window)
 	   (setq edges (window-edges window))
 	   (or (and x (< x (nth 0 edges))) (setq x (nth 0 edges)))
-	   (or (and y (< y (nth 1 edges))) (setq y (nth 1 edges)))
-	   (set-buffer (window-buffer window))
-	   (when (and (boundp 'elscreen-tab-format)
-		      (equal header-line-format elscreen-tab-format))
-	     (setq elscreen-tab-format nil)
-	     (setq header-line-format nil))
-	   )
+	   (or (and y (< y (nth 1 edges))) (setq y (nth 1 edges))))
 	 'other 'other)
 	(setq top-window (window-at x y)))
+
+      (walk-windows
+       (lambda (window)
+	 (set-buffer (window-buffer window))
+	 (when (and (boundp 'elscreen-tab-format)
+		    (equal header-line-format elscreen-tab-format)
+		    (or (not (eq (window-buffer window)
+				 (window-buffer top-window)))
+			(not elscreen-display-tab)))
+	   (setq elscreen-tab-format nil)
+	   (setq header-line-format nil)))
+       'other 'other)
 
       (when elscreen-display-tab
 	(set-buffer (window-buffer top-window))

@@ -1,3 +1,8 @@
+2004-09-12  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.3.3 released.
+
+
 2004-08-23  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.3.2 released.
@@ -6,8 +11,6 @@
 	  `elscreen-save-screen-excursion' macro instead of copy-tree.
 	* (elscreen-save-screen-excursion): Save and restore buffer-list,
 	  as set-window-configuration changes it.
-	* 
-
 
 	
 2004-08-14  Naoto Morishima  <naoto@morishima.net>
