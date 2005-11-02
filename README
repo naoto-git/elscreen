@@ -1,6 +1,6 @@
-ElScreen 1.0 README file
+ElScreen 1.01 README file
 
-This is the distribution of ElScreen 1.0, released January 1997.
+This is the distribution of ElScreen 1.01, released January 1997.
 It is an Emacs utility with which you can have multiple screens on
 your GNU Emacs as well as GNU screen on shell. 
 
@@ -16,10 +16,11 @@ Files
 -----
 This package should contain the following files:
 
-    elscreen.el     ElScreen version 1.0 main file
+    elscreen.el     ElScreen version 1.01 main file
     alist.el        Association list utilities version 0.1
     elscreen-gf/    Emacs interface to GNU id-utils on ElScreen
-    README          Introduction to ElScreen 1.0 (this file)
+    README          Introduction to ElScreen 1.01 (this file)
+    ChangeLog       Change log file
 
 Instllation
 -----------
@@ -55,6 +56,10 @@ You can set the following variables:
     elscreen-prefix-key
     
         Command prefix-key. The default value is '\C-z'.
+
+    elscreen-disable-suspend-emacs
+
+        If non nil, disable suspend-emcas. The default value is 't'.
 
     elscreen-show-screen-number
 

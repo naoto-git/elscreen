@@ -2,14 +2,14 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.0 (7 January, 1997)")
+(defconst elscreen-version "1.01 (8 January, 1997)")
 ;;
 ;; Author:   Naoto Morishima <naoto-m@is.aist-nara.ac.jp>
 ;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el 
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  22 June, 1996
-;; Revised:  1 January, 1997
+;; Revised:  8 January, 1997
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -33,6 +33,9 @@
 ;
 (defvar elscreen-prefix-key "\C-z"
   "*ElScreen command prefix-key.")
+
+(defvar elscreen-disable-suspend-emacs t
+  "*If non-nil, disable suspend-emcas.")
 
 (defvar elscreen-show-screen-number t
   "*If non-nil, show the number of the current screen in the mode line.")
@@ -82,23 +85,23 @@
   "*Number of the previous screen.")
 
 (defvar elscreen-help "ElScreen keys:
-       \\[elscreen-create]    create a new screen         
-       \\[elscreen-kill]    kill the current screen
-       \\[elscreen-previous]    switch to the previous screen
-       \\[elscreen-next]    switch to the next screen
-       \\[elscreen-toggle]    toggle screen
+       \\[elscreen-create]    Create a new screen         
+       \\[elscreen-kill]    Kill the current screen
+       \\[elscreen-previous]    Switch to the previous screen
+       \\[elscreen-next]    Switch to the next screen
+       \\[elscreen-toggle]    Toggle screen
        \\[elscreen-goto]    Jump to the specified screen
        \\[elscreen-jump-0]  
-         :      jump to the screen #
+         :      Jump to the screen #
        \\[elscreen-jump-9]      
-       \\[elscreen-show-list]    show list of screens
-       \\[elscreen-name]    name the current screen
-       \\[elscreen-show-last-message]    show last message
-       \\[elscreen-show-time]    show time
-       \\[elscreen-show-version]    show ElScreen version
-       \\[elscreen-find-file]    create new screen and open file
-       \\[elscreen-number-mode-line]    show/hide the screen number in the mode line
-       \\[elscreen-help]    show this help"
+       \\[elscreen-show-list]    Show list of screens
+       \\[elscreen-name]    Name the current screen
+       \\[elscreen-show-last-message]    Show last message
+       \\[elscreen-show-time]    Show time
+       \\[elscreen-show-version]    Show ElScreen version
+       \\[elscreen-find-file]    Create new screen and open file
+       \\[elscreen-number-mode-line]    Show/hide the screen number in the mode line
+       \\[elscreen-help]    Show this help"
   "*Help shown by elscreen-help-mode")
 
 ;
@@ -138,6 +141,7 @@
 (define-key elscreen-map  "A"    'elscreen-name)
 (define-key elscreen-map  "v"    'elscreen-show-version)
 (define-key elscreen-map  "i"    'elscreen-number-mode-line)
+(define-key elscreen-map  "\C-z" 'elscreen-suspend-emacs)
 (define-key elscreen-map  "l"    'elscreen-link)
 (define-key elscreen-map  "s"    'elscreen-split)
 
@@ -544,6 +548,17 @@ creating one if none already exists."
     (eval help-function)))
 
 (elscreen-add-help)
+
+
+(defun elscreen-suspend-emacs ()
+  "Suspend or iconize Emacs."
+  (interactive)
+  (if (null elscreen-disable-suspend-emacs)
+      (cond
+       (window-system
+	(iconify-or-deiconify-frame))
+       (t
+	(suspend-emacs)))))
 
 
 (defun elscreen-show-last-message ()

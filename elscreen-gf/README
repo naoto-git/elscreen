@@ -5,7 +5,7 @@ with ElScreen 1.0. This is an EMACS interface to 'GNU id-utils'. It
 works inside the ElScreen environment.
 
 'GNU id-utils' is language-independent identifier database tool. This
-stores tokes, literal numbers, or words of human-readable text. 
+stores tokens, literal numbers, or words of human-readable text. 
 
 With ElScreen-GF, you can search keyword, list entries, and jump to
 them more easily. It will be helpful to you when you hack source
@@ -21,6 +21,7 @@ This package should contain the following files:
                                 <youki@center.osaka-u.ac.jp>)
     directory-complete.el   read-directory-name function version 0.1
     README                  Introduction to ElScreen-GF 1.0 (this file)
+    QuickStart              Quick start guide
 
 Installation
 ------------
@@ -74,8 +75,8 @@ You can set the following variables:
         After you jump to an entry, ElScreen-GF applies the overlay
         which these values specifies with the corresponding line. The
         default values are 'face' and 'highlight'. If you always use
-        EMACS with '-nw' option, 'highlight' is difficult to look at,
-        so please add following line to your .emacs:
+        EMACS with '-nw' option, 'highlight' is hard to look at, so
+		please add following line to your .emacs:
 
         (if (null (featurep 'hilit19))
             (setq elscreen-gf-entry-overlay-value 'bold))

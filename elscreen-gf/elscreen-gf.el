@@ -405,11 +405,11 @@ is non-nil, mkid always runs recursively."
 
 
 (elscreen-add-help "ElScreen-GF keys:
-       \\[elscreen-gf-grep]    run grep
-       \\[elscreen-gf-gid]    run gid
-       \\[elscreen-gf-aid]    run aid
-       \\[elscreen-gf-mkid]    run mkid
-       \\[elscreen-gf-show-version]    show ElScreen-GF version")
+       \\[elscreen-gf-grep]    Run grep
+       \\[elscreen-gf-gid]    Run gid
+       \\[elscreen-gf-aid]    Run aid
+       \\[elscreen-gf-mkid]    Run mkid
+       \\[elscreen-gf-show-version]    Show ElScreen-GF version")
 
 (defun elscreen-gf-show-version ()
   "Show ElScreen-GF version."
