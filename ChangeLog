@@ -1,3 +1,42 @@
+2005-11-05  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-status-char): New function.
+	* (elscreen-find-screen): Ditto.
+	* (elscreen-find-screen-by-buffer): Ditto.
+	* (elscreen-find-screen-by-major-mode): Ditto.
+	* (elscreen-goto-screen-with-buffer): Renamed to...
+	* (elscreen-find-and-goto-by-buffer): this, and almost rewritten
+	  using `elscreen-find-screen-by-buffer'.  This function now does
+	  not create new screen by default when target screen isn't found.
+	  Also this uses iswitchb-read-buffer if iswitchb is loaded.
+	* (elscreen-find-file): Use `elscreen-find-and-goto-by-buffer'.
+
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* (elscreen-select-and-goto): New function.  Now C-z g is bounded
+	  to this, instead of primitive `elscreen-goto'.
+
+	
+2005-11-04  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen-screen-modified-hook-suppress: Renamed to...
+	* elscreen-screen-modified-hook-suppress-flag: this.
+	* (elscreen-screen-modified-hook-suppress): New macro. 
+	  Several functions use this instead of setting
+	  `elscreen-screen-modified-hook-suppress-flag' directly.
+	* (elscreen-one-screen-p): New function.  Several 
+	  functions now use this.
+	* (elscreen-create-internal): New function.  This creates new
+	  screen and just returns its number.
+	* (elscreen-create): Just call `elscreen-create-internal' and
+	  `elscreen-goto'.
+	* (elscreen-goto): Return screen if success, otherwise nil.
+	
+
+2005-11-03  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-e21-tab-update): Replace `%' to `%%'.
+
+
 2005-10-17  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.3.5 released.
