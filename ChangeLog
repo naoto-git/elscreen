@@ -1,6 +1,28 @@
+2005-11-09  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-screen-modified-hook): Renamed to...
+	* (elscreen-notify-screen-modification): this, and now this calls
+	  `elscreen-run-screen-update-hook' when argument MODE is set to
+	  'force-immediately. 
+	* (elscreen-screen-modified-set-hook): Renamed to...
+	* (elscreen-screen-modified-hook-setup): this, and does not run
+	  `elscreen-screen-update-hook' any more.
+	* (elscreen-select-and-goto): Use `read-from-minibuffer' to read
+	  key instead of 'read-char-exclusive' so that emacs can receive
+	  any commands in the other frames.  Also avoid to try delete
+	  window for minibuffer when it is active.
+	
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* (elscreen-kill-others): New function.
+	* (elscreen-select-and-goto): Support several commands such as
+	  create, next, etc.  Also set buffer for candidate read-only.
+	* (elscreen-execute-extended-command): Fix bug that
+	  `target-screen' is not bounded by let.
+	
+
 2005-11-05  Naoto Morishima  <naoto@morishima.net>
 
-	* (elscreen-status-char): New function.
+	* (elscreen-status-label): New function.
 	* (elscreen-find-screen): Ditto.
 	* (elscreen-find-screen-by-buffer): Ditto.
 	* (elscreen-find-screen-by-major-mode): Ditto.
@@ -19,8 +41,8 @@
 2005-11-04  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen-screen-modified-hook-suppress: Renamed to...
-	* elscreen-screen-modified-hook-suppress-flag: this.
-	* (elscreen-screen-modified-hook-suppress): New macro. 
+	* elscreen-notify-screen-modification-suppress-flag: this.
+	* (elscreen-notify-screen-modification-suppress): New macro. 
 	  Several functions use this instead of setting
 	  `elscreen-screen-modified-hook-suppress-flag' directly.
 	* (elscreen-one-screen-p): New function.  Several 
