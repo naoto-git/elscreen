@@ -1,3 +1,12 @@
+2005-11-10  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-select-and-goto): Remove bound but unused variables.
+	* (elscreen-display-screen-name-list): Ditto.
+	
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* Use static-* to evaluate statically when compilation time.
+
+	
 2005-11-09  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-screen-modified-hook): Renamed to...
