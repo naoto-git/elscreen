@@ -819,7 +819,7 @@ is ommitted, current-screen will survive."
 		      screen-list nil)))
 	 (prompt "Select screen or (c)reate, (n)ext, (p)revious, (t)oggle: ")
 	 (minibuffer-map (copy-keymap minibuffer-local-map))
-	 window frame-last-window command-or-target-screen)
+	 window frame-last-window command-or-target-screen mini-hist)
     ;; prepare window to show candidates
     (save-window-excursion
       (setq frame-last-window (previous-window (static-if elscreen-on-xemacs
@@ -874,7 +874,8 @@ is ommitted, current-screen will survive."
         ;; read key from minibuffer
 	(unwind-protect
 	    (setq command-or-target-screen
-		  (read-from-minibuffer prompt nil minibuffer-map))
+		  (read-from-minibuffer prompt nil minibuffer-map
+					nil 'mini-hist))
 	  (kill-buffer candidate-buffer))))
     (cond
      ((string= command-or-target-screen ""))
