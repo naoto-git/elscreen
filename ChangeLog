@@ -2,7 +2,15 @@
 
 	* (elscreen-select-and-goto): Remove bound but unused variables.
 	* (elscreen-display-screen-name-list): Ditto.
-	
+	* (elscreen-set-prefix-key): New function.
+	* (elscreen-find-screen-by-buffer): Return nil if buffer does not
+	  exist. 
+	* (elscreen-find-screen-by-major-mode): regexp-quote'ize
+	  major-mode name.
+	* (elscreen-find-screen-by-buffer): Don't use
+	  `with-selected-window', which does not exist on GNU Emacs 21.
+	* (elscreen-find-screen-by-major-mode)): Ditto.
+
 	From Hideyuki SHIRAI <shirai@meadowy.org>:
 	* Use static-* to evaluate statically when compilation time.
 

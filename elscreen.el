@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.4.0rc4 (November 10, 2005)")
+(defconst elscreen-version "1.4.0rc5 (November 10, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
@@ -48,8 +48,7 @@
   :tag "Prefix-key"
   :set (lambda (symbol value)
 	 (when (boundp 'elscreen-map)
-	   (global-set-key value elscreen-map)
-	   (global-unset-key elscreen-prefix-key))
+	   (elscreen-set-prefix-key value))
 	 (custom-set-default symbol value))
   :group 'elscreen)
 
@@ -165,8 +164,6 @@ buffer-name and corresponding screen-name."
 
 (defvar elscreen-map (make-sparse-keymap)
   "*Keymap for ElScreen.")
-(global-set-key elscreen-prefix-key elscreen-map)
-
 (define-key elscreen-map "\C-c" 'elscreen-create)
 (define-key elscreen-map "c"    'elscreen-create)
 (define-key elscreen-map "\C-k" 'elscreen-kill)
@@ -180,7 +177,7 @@ buffer-name and corresponding screen-name."
 (define-key elscreen-map "\C-a" 'elscreen-toggle)
 (define-key elscreen-map "a"    'elscreen-toggle)
 (define-key elscreen-map "g"    'elscreen-select-and-goto)
-(define-key elscreen-map "0"    'elscreen-jump)
+(define-key elscreen-map "0"    'elscreen-jump-0)
 (define-key elscreen-map "1"    'elscreen-jump)
 (define-key elscreen-map "2"    'elscreen-jump)
 (define-key elscreen-map "3"    'elscreen-jump)
@@ -189,7 +186,7 @@ buffer-name and corresponding screen-name."
 (define-key elscreen-map "6"    'elscreen-jump)
 (define-key elscreen-map "7"    'elscreen-jump)
 (define-key elscreen-map "8"    'elscreen-jump)
-(define-key elscreen-map "9"    'elscreen-jump)
+(define-key elscreen-map "9"    'elscreen-jump-9)
 (define-key elscreen-map "?"    'elscreen-help)
 (define-key elscreen-map "b"    'elscreen-find-and-goto-by-buffer)
 (define-key elscreen-map "\C-s" 'elscreen-swap)
@@ -206,7 +203,24 @@ buffer-name and corresponding screen-name."
 (define-key elscreen-map "\C-f" 'elscreen-find-file)
 (define-key elscreen-map "\M-x" 'elscreen-execute-extended-command)
 
-(define-key minibuffer-local-map elscreen-prefix-key 'undefined)
+(defun elscreen-set-prefix-key (prefix-key)
+  (when (not (eq elscreen-prefix-key prefix-key))
+    (when elscreen-prefix-key
+      (global-set-key elscreen-prefix-key
+		      (get 'elscreen-prefix-key
+			   'global-map-original-definition))
+      (define-key minibuffer-local-map elscreen-prefix-key
+	(get 'elscreen-prefix-key 'minibuffer-local-map-original-definition)))
+    (put 'elscreen-prefix-key 'global-map-original-definition
+	 (lookup-key global-map prefix-key))
+    (put 'elscreen-prefix-key 'minibuffer-local-map-original-definition
+	 (lookup-key minibuffer-local-map prefix-key)))
+  (global-set-key prefix-key elscreen-map)
+  (define-key minibuffer-local-map prefix-key 'undefined)
+  (setq elscreen-prefix-key prefix-key))
+(let ((prefix-key elscreen-prefix-key)
+      (elscreen-prefix-key nil))
+  (elscreen-set-prefix-key prefix-key))
 
 (defvar elscreen-help "ElScreen keys:
        \\[elscreen-create]    Create a new screen and switch to it
@@ -216,9 +230,9 @@ buffer-name and corresponding screen-name."
        \\[elscreen-previous]    Switch to the \"previous\" screen in a cyclic order
        \\[elscreen-toggle]    Toggle to the screen selected previously
        \\[elscreen-select-and-goto]    Jump to the specified screen
-       \\[elscreen-map] 0
+       \\[elscreen-jump-0]
          :      Jump to the screen #
-       \\[elscreen-map] 9
+       \\[elscreen-jump-9]
        \\[elscreen-display-screen-name-list]    Show list of screens
        \\[elscreen-screen-nickname]    Name the current screen
        \\[elscreen-display-last-message]    Show last message
@@ -609,6 +623,7 @@ If FRAME is omitted, selected-frame is used."
 					   (window-list)))))))
     (when (and (null target-screen) create)
       (cond
+       ((null buffer))
        ((setq target-screen (elscreen-create-internal t))
 	(save-window-excursion
 	  (elscreen-goto-internal target-screen)
@@ -619,7 +634,8 @@ If FRAME is omitted, selected-frame is used."
        (t
 	(setq target-screen (elscreen-get-current-screen))
 	(elscreen-goto-internal target-screen)
-	(with-selected-window (split-window)
+	(save-selected-window
+	  (select-window (split-window))
 	  (switch-to-buffer buffer t)))))
     target-screen))
 
@@ -628,20 +644,22 @@ If FRAME is omitted, selected-frame is used."
 			((stringp major-mode-or-re)
 			 major-mode-or-re)
 			((symbolp major-mode-or-re)
-			 (format "^%s$" (symbol-name major-mode-or-re)))
+			 (format "^%s$" (regexp-quote
+					 (symbol-name major-mode-or-re))))
 			(t nil))))
     (when major-mode-re
       (elscreen-find-screen
        (lambda (screen)
 	 (elscreen-goto-internal screen)
-	 (catch 'find
-	   (mapcar
-	    (lambda (window)
-	      (with-selected-window window
+	 (save-selected-window
+	   (catch 'find
+	     (mapcar
+	      (lambda (window)
+		(select-window window)
 		(if (string-match major-mode-re (symbol-name major-mode))
-		    (throw 'find t))))
-	    (window-list))
-	   nil))))))
+		    (throw 'find t)))
+	      (window-list))
+	     nil)))))))
 
 (defun elscreen-get-screen-create (buffer) ;# obsolete
   (elscreen-message "`elscreen-get-screen' is obsoleted. Use `elscreen-find-and-goto-by-buffer' instead.")
@@ -738,7 +756,7 @@ is ommitted, current-screen will survive."
       (elscreen-message "There is only one screen, cannot kill"))
      ((or
        (not (interactive-p))
-       (yes-or-no-p (format "Really kill screens other than %d?" screen)))
+       (yes-or-no-p (format "Really kill screens other than %d? " screen)))
       (elscreen-set-current-screen screen)
       (elscreen-set-previous-screen nil)
       (setq screen-list-string (mapconcat 
@@ -826,15 +844,16 @@ is ommitted, current-screen will survive."
 	(erase-buffer)
 	(insert candidate)
 	(goto-char (point-min))
-	(while (not (eobp))
-	  (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
-	    (put-text-property
-	     (match-beginning 1) (match-end 1) 'face 'bold)
-	    (cond
-	     ((string= (match-string 2) "+")
+	(save-excursion
+	  (while (not (eobp))
+	    (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
 	      (put-text-property
-	       (match-beginning 3) (match-end 3) 'face 'bold))))
-	  (forward-line 1))
+	       (match-beginning 1) (match-end 1) 'face 'bold)
+	      (cond
+	       ((string= (match-string 2) "+")
+		(put-text-property
+		 (match-beginning 3) (match-end 3) 'face 'bold))))
+	    (forward-line 1)))
 	(setq buffer-read-only t)
 	(set-buffer-modified-p nil)
         ;; make keymap for minibuffer
@@ -913,7 +932,8 @@ is ommitted, current-screen will survive."
   (let ((next-screen (string-to-number (string last-command-char))))
     (if (and (<= 0 next-screen) (<= next-screen 9))
 	(elscreen-goto next-screen))))
-
+(defalias 'elscreen-jump-0 'elscreen-jump)
+(defalias 'elscreen-jump-9 'elscreen-jump)
 
 ; Swap current screen number with previous one
 
