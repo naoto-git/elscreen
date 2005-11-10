@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el 
 ;;
-(defconst elscreen-version "1.4.0rc5 (November 10, 2005)")
+(defconst elscreen-version "1.4.0rc6 (November 10, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;;              Nara Institute of Science and Technology, Japan
@@ -244,80 +244,6 @@ buffer-name and corresponding screen-name."
   "*Help shown by elscreen-help-mode")
 
 
-(static-cond
- (elscreen-on-emacs ; GNU Emacs 21
-  (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
-    (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer)
-
-  (defvar elscreen-menu-bar-command-entries
-    (list (list 'elscreen-command-separator
-		'menu-item
-		"--")
-	  (list 'elscreen-create
-		'menu-item
-		"Create Screen"
-		'elscreen-create
-		:help "Create a new screen and switch to it")
-	  (list 'elscreen-kill
-		'menu-item
-		"Kill Screen"
-		'elscreen-kill
-		:help "Kill the current screen")
-	  (list 'elscreen-kill-others
-		'menu-item
-		"Kill Other Screens"
-		'elscreen-kill-others
-		:help "Kill other screens")
-	  (list 'elscreen-next
-		'menu-item
-		"Next Screen"
-		'elscreen-next
-		:help "Switch to the \"next\" screen in a cyclic order")
-	  (list 'elscreen-previous
-		'menu-item
-		"Previous Screen"
-		'elscreen-previous
-		:help "Switch to the \"previous\" screen in a cyclic order")
-	  (list 'elscreen-toggle
-		'menu-item
-		"Toggle Screen"
-		'elscreen-toggle
-		:help "Toggle to the screen selected previously")))
-
-  (defvar elscreen-tab-separator
-    (propertize
-     " "
-     'face 'elscreen-tab-background-face
-     'display '(space :width 0.5))
-    "String used to separate tabs.")
-  )
- (elscreen-on-xemacs ; XEmacs
-  (defvar elscreen-menu-bar-command-entries
-    '("%_ElScreen"
-      :filter elscreen-xmas-menu-bar-filter
-      "----"  
-      ["%_Create Screen" elscreen-create]
-      ["%_Kill Screen" elscreen-kill]  
-      ["%_Kill Other Screens" elscreen-kill-others]  
-      ["%_Next Screen" elscreen-next]
-      ["%_Previous Screen" elscreen-previous]
-      ["%_Toggle Screen" elscreen-toggle]
-      ))
-
-  (defconst elscreen-menubar (copy-sequence default-menubar))
-  (let ((menubar elscreen-menubar))
-    (catch 'buffers-menu-search
-      (while (car menubar)
-	(when (equal (car (car menubar)) "%_Buffers")
-	  (throw 'buffers-menu-search menubar))
-	(setq menubar (cdr menubar))))
-    (setcdr menubar (cons elscreen-menu-bar-command-entries (cdr menubar))))
-
-  (set-menubar elscreen-menubar)
-  (set-menubar-dirty-flag)
-  ))
-
-
 ;;; Code:
 
 ; Window configuration handling
@@ -554,7 +480,8 @@ If FRAME is omitted, selected-frame is used."
 	     (,@ body))
 	 (setq elscreen-frame-confs original-frame-confs)
 	 (elscreen-goto-internal (elscreen-get-current-screen))
-	 (elscreen-screen-number-string-update)
+	 (static-when elscreen-on-xemacs
+	   (elscreen-screen-number-string-update))
 	 (mapcar
 	  (lambda (buffer)
 	    (when (buffer-live-p buffer)
@@ -677,31 +604,6 @@ Default value for SEC is 3."
     (sit-for (or sec 3)))
   (message nil))
 
-; Display screen number in modelines
-
-(defvar elscreen-screen-number-string "[0]")
-(let ((mode-line (or
-		  ;; GNU Emacs 21.3.50 or later
-		  (memq 'mode-line-position mode-line-format)
-		  ;; GNU Emacs 21.3.1
-		  (memq 'mode-line-buffer-identification mode-line-format)
-		  ;; XEmacs
-		  (memq 'global-mode-string mode-line-format)))
-      (elscreen-mode-line-elm
-       '(elscreen-display-screen-number elscreen-screen-number-string)))
-  (if (null (member elscreen-mode-line-elm mode-line))
-      (setcdr mode-line (cons elscreen-mode-line-elm (cdr mode-line)))))
-
-(defun elscreen-screen-number-string-update ()
-  (setq elscreen-screen-number-string
-	(format "[%d]" (elscreen-get-current-screen))))
-
-(defun elscreen-display-screen-number-toggle ()
-  "Toggle the screen number in the mode line."
-  (interactive)
-  (setq elscreen-display-screen-number (null elscreen-display-screen-number))
-  (redraw-frame (selected-frame)))
-
 
 ; Create/Kill a screen
 
@@ -786,7 +688,8 @@ is ommitted, current-screen will survive."
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
-    (elscreen-screen-number-string-update)
+    (static-when elscreen-on-xemacs
+      (elscreen-screen-number-string-update))
 ;    (redraw-frame (selected-frame)) ; XXX?
     (elscreen-notify-screen-modification 'force)
     (run-hooks 'elscreen-goto-hook)
@@ -1058,10 +961,61 @@ is ommitted, current-screen will survive."
       screen-list "  "))))
 
 
-;; Menu & Tab
+;; Mode Line & Menu & Tab
 
 ;; GNU Emacs
 (static-when elscreen-on-emacs
+  ;; Mode Line
+  (let ((mode-line (or
+                    ;; GNU Emacs 21.3.50 or later
+                    (memq 'mode-line-position mode-line-format)
+                    ;; GNU Emacs 21.3.1
+                    (memq 'mode-line-buffer-identification mode-line-format)))
+        (elscreen-mode-line-elm
+         '(elscreen-display-screen-number
+           (:eval (format " [%d]" (elscreen-get-current-screen))))))
+    (if (null (member elscreen-mode-line-elm mode-line))
+        (setcdr mode-line (cons elscreen-mode-line-elm (cdr mode-line)))))
+
+  ;; Menu
+  (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
+    (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer)
+
+  (defvar elscreen-menu-bar-command-entries
+    (list (list 'elscreen-command-separator
+		'menu-item
+		"--")
+	  (list 'elscreen-create
+		'menu-item
+		"Create Screen"
+		'elscreen-create
+		:help "Create a new screen and switch to it")
+	  (list 'elscreen-kill
+		'menu-item
+		"Kill Screen"
+		'elscreen-kill
+		:help "Kill the current screen")
+	  (list 'elscreen-kill-others
+		'menu-item
+		"Kill Other Screens"
+		'elscreen-kill-others
+		:help "Kill other screens")
+	  (list 'elscreen-next
+		'menu-item
+		"Next Screen"
+		'elscreen-next
+		:help "Switch to the \"next\" screen in a cyclic order")
+	  (list 'elscreen-previous
+		'menu-item
+		"Previous Screen"
+		'elscreen-previous
+		:help "Switch to the \"previous\" screen in a cyclic order")
+	  (list 'elscreen-toggle
+		'menu-item
+		"Toggle Screen"
+		'elscreen-toggle
+		:help "Toggle to the screen selected previously")))
+
   (defun elscreen-e21-menu-bar-update (&optional force)
     (when (and (lookup-key (current-global-map) [menu-bar elscreen])
 	       (or force
@@ -1112,6 +1066,17 @@ is ommitted, current-screen will survive."
       (define-key keymap [header-line mouse-1] action)
       (define-key keymap [header-line mouse-2] action)
       keymap))
+
+  (elscreen-e21-menu-bar-update t)
+  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
+
+  ;; Tab
+  (defvar elscreen-tab-separator
+    (propertize
+     " "
+     'face 'elscreen-tab-background-face
+     'display '(space :width 0.5))
+    "String used to separate tabs.")
 
   (defvar elscreen-tab-format nil)
   (make-variable-buffer-local 'elscreen-tab-format)
@@ -1206,14 +1171,49 @@ is ommitted, current-screen will survive."
 	  (unless (equal elscreen-tab-format header-line-format)
 	    (setq header-line-format elscreen-tab-format))))))
  
-  (elscreen-e21-menu-bar-update t)
   (elscreen-e21-tab-update t)
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update)
   )
 
 ;; XEmacs
 (static-when elscreen-on-xemacs
+  ;; Mode Line
+  (defvar elscreen-screen-number-string " [0]")
+  (defun elscreen-screen-number-string-update ()
+    (setq elscreen-screen-number-string
+	  (format " [%d]" (elscreen-get-current-screen))))
+
+  (let ((mode-line (memq 'global-mode-string mode-line-format))
+        (elscreen-mode-line-elm
+         '(elscreen-display-screen-number elscreen-screen-number-string)))
+    (if (null (member elscreen-mode-line-elm mode-line))
+        (setcdr mode-line (cons elscreen-mode-line-elm (cdr mode-line)))))
+
+  ;; Menu
+  (defvar elscreen-menu-bar-command-entries
+    '("%_ElScreen"
+      :filter elscreen-xmas-menu-bar-filter
+      "----"  
+      ["%_Create Screen" elscreen-create]
+      ["%_Kill Screen" elscreen-kill]  
+      ["%_Kill Other Screens" elscreen-kill-others]  
+      ["%_Next Screen" elscreen-next]
+      ["%_Previous Screen" elscreen-previous]
+      ["%_Toggle Screen" elscreen-toggle]
+      ))
+
+  (defconst elscreen-menubar (copy-sequence default-menubar))
+  (let ((menubar elscreen-menubar))
+    (catch 'buffers-menu-search
+      (while (car menubar)
+	(when (equal (car (car menubar)) "%_Buffers")
+	  (throw 'buffers-menu-search menubar))
+	(setq menubar (cdr menubar))))
+    (setcdr menubar (cons elscreen-menu-bar-command-entries (cdr menubar))))
+
+  (set-menubar elscreen-menubar)
+  (set-menubar-dirty-flag)
+
   (defun elscreen-xmas-menu-bar-filter (menu)
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
 	  (screen-to-name-alist (elscreen-get-screen-to-name-alist 25))
@@ -1267,6 +1267,12 @@ is ommitted, current-screen will survive."
 
 
 ; Utility Functions
+
+(defun elscreen-display-screen-number-toggle ()
+  "Toggle the screen number in the mode line."
+  (interactive)
+  (setq elscreen-display-screen-number (null elscreen-display-screen-number))
+  (redraw-frame (selected-frame)))
 
 (defun elscreen-display-last-message ()
   "Display the last message."
