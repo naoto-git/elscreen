@@ -605,7 +605,7 @@ Default value for SEC is 3."
   (message nil))
 
 
-; Create/Kill a screen
+;; Create & Kill & Goto
 
 (defun elscreen-create ()
   "Create a new screen."
@@ -672,8 +672,6 @@ is ommitted, current-screen will survive."
 	  (elscreen-message (format "screen %s killed" screen-list-string)))))
     screen-list))
 
-; Switch the screen
-
 (defvar elscreen-goto-hook nil)
 (defun elscreen-goto (screen)
   "Jump to SCREEN."
@@ -697,95 +695,6 @@ is ommitted, current-screen will survive."
    (t
     (elscreen-message (format "No screen %d" screen))
     nil)))
-
-(defun elscreen-select-and-goto ()
-  (interactive)
-  (let* ((screen-list (sort (elscreen-get-screen-list) '<))
-	 (screen-to-name-alist (elscreen-get-screen-to-name-alist
-				(- (frame-width) 6)))
-	 (command-list '(("c" . elscreen-create)
-			 ("n" . elscreen-next)
-			 ("p" . elscreen-previous)
-			 ("t" .  elscreen-toggle)))
-	 (candidate-window-height (max (+ (elscreen-get-number-of-screens) 4)
-				       window-min-height))
-	 (candidate-buffer (get-buffer-create
-			    (format " *ElScreen-select:%s*"
-				    (prin1-to-string (selected-frame)))))
-	 (candidate (concat
-		     "Current screen list: \n\n"
-		     (mapconcat
-		      (lambda (screen)
-			(format "  %d%s %s\n" screen
-				(elscreen-status-label screen)
-				(get-alist screen screen-to-name-alist)))
-		      screen-list nil)))
-	 (prompt "Select screen or (c)reate, (n)ext, (p)revious, (t)oggle: ")
-	 (minibuffer-map (copy-keymap minibuffer-local-map))
-	 window frame-last-window command-or-target-screen mini-hist)
-    ;; prepare window to show candidates
-    (save-window-excursion
-      (setq frame-last-window (previous-window (static-if elscreen-on-xemacs
-						   (frame-highest-window)
-						 (frame-first-window))))
-      (while (minibuffer-window-active-p frame-last-window)
-	(setq frame-last-window (previous-window frame-last-window)))
-      (while (and
-	      (not (one-window-p))
-	      (or (< (window-width frame-last-window)
-		     (frame-width))
-		  (< (window-height frame-last-window)
-		     (+ candidate-window-height window-min-height))))
-	(setq window frame-last-window)
-	(setq frame-last-window (previous-window window))
-	(delete-window window))
-      (select-window (split-window frame-last-window))
-      (shrink-window (- (window-height) candidate-window-height))
-      ;; now switch to the buffer for candidates and fill it
-      (switch-to-buffer candidate-buffer)
-      (let ((buffer-read-only nil))
-	(erase-buffer)
-	(insert candidate)
-	(goto-char (point-min))
-	(save-excursion
-	  (while (not (eobp))
-	    (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
-	      (put-text-property
-	       (match-beginning 1) (match-end 1) 'face 'bold)
-	      (cond
-	       ((string= (match-string 2) "+")
-		(put-text-property
-		 (match-beginning 3) (match-end 3) 'face 'bold))))
-	    (forward-line 1)))
-	(setq buffer-read-only t)
-	(set-buffer-modified-p nil)
-        ;; make keymap for minibuffer
-	(suppress-keymap minibuffer-map t)
-	(define-key minibuffer-map "\C-g" 'abort-recursive-edit)
-	(define-key minibuffer-map "\C-m" 'exit-recursive-edit)
-	(define-key minibuffer-map "q" 'exit-recursive-edit)
-	(define-key minibuffer-map " " 'exit-recursive-edit)
-	(mapcar
-	 (lambda (command)
-	   (define-key minibuffer-map (car command) 'self-insert-and-exit))
-	 command-list)
-	(mapcar
-	 (lambda (screen)
-	   (define-key minibuffer-map (number-to-string screen)
-	     'self-insert-and-exit))
-	 screen-list)
-        ;; read key from minibuffer
-	(unwind-protect
-	    (setq command-or-target-screen
-		  (read-from-minibuffer prompt nil minibuffer-map
-					nil 'mini-hist))
-	  (kill-buffer candidate-buffer))))
-    (cond
-     ((string= command-or-target-screen ""))
-     ((get-alist command-or-target-screen command-list)
-      (funcall (get-alist command-or-target-screen command-list)))
-     (t
-      (elscreen-goto (string-to-number command-or-target-screen))))))
 
 (defun elscreen-next ()
   "Switch to the next screen."
@@ -1272,6 +1181,95 @@ is ommitted, current-screen will survive."
   (interactive)
   (elscreen-message
    (concat (current-time-string) " " (nth 1 (current-time-zone))) 3))
+
+(defun elscreen-select-and-goto ()
+  (interactive)
+  (let* ((screen-list (sort (elscreen-get-screen-list) '<))
+	 (screen-to-name-alist (elscreen-get-screen-to-name-alist
+				(- (frame-width) 6)))
+	 (command-list '(("c" . elscreen-create)
+			 ("n" . elscreen-next)
+			 ("p" . elscreen-previous)
+			 ("t" .  elscreen-toggle)))
+	 (candidate-window-height (max (+ (elscreen-get-number-of-screens) 4)
+				       window-min-height))
+	 (candidate-buffer (get-buffer-create
+			    (format " *ElScreen-select:%s*"
+				    (prin1-to-string (selected-frame)))))
+	 (candidate (concat
+		     "Current screen list: \n\n"
+		     (mapconcat
+		      (lambda (screen)
+			(format "  %d%s %s\n" screen
+				(elscreen-status-label screen)
+				(get-alist screen screen-to-name-alist)))
+		      screen-list nil)))
+	 (prompt "Select screen or (c)reate, (n)ext, (p)revious, (t)oggle: ")
+	 (minibuffer-map (copy-keymap minibuffer-local-map))
+	 window frame-last-window command-or-target-screen mini-hist)
+    ;; prepare window to show candidates
+    (save-window-excursion
+      (setq frame-last-window (previous-window (static-if elscreen-on-xemacs
+						   (frame-highest-window)
+						 (frame-first-window))))
+      (while (minibuffer-window-active-p frame-last-window)
+	(setq frame-last-window (previous-window frame-last-window)))
+      (while (and
+	      (not (one-window-p))
+	      (or (< (window-width frame-last-window)
+		     (frame-width))
+		  (< (window-height frame-last-window)
+		     (+ candidate-window-height window-min-height))))
+	(setq window frame-last-window)
+	(setq frame-last-window (previous-window window))
+	(delete-window window))
+      (select-window (split-window frame-last-window))
+      (shrink-window (- (window-height) candidate-window-height))
+      ;; now switch to the buffer for candidates and fill it
+      (switch-to-buffer candidate-buffer)
+      (let ((buffer-read-only nil))
+	(erase-buffer)
+	(insert candidate)
+	(goto-char (point-min))
+	(save-excursion
+	  (while (not (eobp))
+	    (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
+	      (put-text-property
+	       (match-beginning 1) (match-end 1) 'face 'bold)
+	      (cond
+	       ((string= (match-string 2) "+")
+		(put-text-property
+		 (match-beginning 3) (match-end 3) 'face 'bold))))
+	    (forward-line 1)))
+	(setq buffer-read-only t)
+	(set-buffer-modified-p nil)
+        ;; make keymap for minibuffer
+	(suppress-keymap minibuffer-map t)
+	(define-key minibuffer-map "\C-g" 'abort-recursive-edit)
+	(define-key minibuffer-map "\C-m" 'exit-recursive-edit)
+	(define-key minibuffer-map "q" 'exit-recursive-edit)
+	(define-key minibuffer-map " " 'exit-recursive-edit)
+	(mapcar
+	 (lambda (command)
+	   (define-key minibuffer-map (car command) 'self-insert-and-exit))
+	 command-list)
+	(mapcar
+	 (lambda (screen)
+	   (define-key minibuffer-map (number-to-string screen)
+	     'self-insert-and-exit))
+	 screen-list)
+        ;; read key from minibuffer
+	(unwind-protect
+	    (setq command-or-target-screen
+		  (read-from-minibuffer prompt nil minibuffer-map
+					nil 'mini-hist))
+	  (kill-buffer candidate-buffer))))
+    (cond
+     ((string= command-or-target-screen ""))
+     ((get-alist command-or-target-screen command-list)
+      (funcall (get-alist command-or-target-screen command-list)))
+     (t
+      (elscreen-goto (string-to-number command-or-target-screen))))))
 
 (defun elscreen-find-and-goto-by-buffer (&optional buffer create)
   "Go to the screen that has the window with buffer BUFFER,
