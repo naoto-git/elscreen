@@ -1,5 +1,12 @@
 2005-11-10  Naoto Morishima  <naoto@morishima.net>
 
+	* Collect emacssen-dependent code together, and clean up tab and
+	  mode-line code for GNU Emacs.
+	* Delete trailing whitespaces.
+
+
+2005-11-10  Naoto Morishima  <naoto@morishima.net>
+
 	* (elscreen-select-and-goto): Remove bound but unused variables.
 	* (elscreen-display-screen-name-list): Ditto.
 	* (elscreen-set-prefix-key): New function.
