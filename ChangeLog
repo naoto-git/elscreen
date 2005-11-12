@@ -1,7 +1,19 @@
-2005-11-10  Naoto Morishima  <naoto@morishima.net>
+2005-11-13  Naoto Morishima  <naoto@morishima.net>
 
-	* Collect emacssen-dependent code together, and clean up tab and
-	  mode-line code for GNU Emacs.
+	* elscreen-default-buffer-initial-major-mode: New variable.
+	* elscreen-default-buffer-initial-message: Ditto.
+	* (elscreen-create-internal): Insert default message and set
+	  major-mode when default buffer is created.
+	* elscreen-startup-command-line-processing: Ditto.
+	* (elscreen-command-line-find-file): New function.
+	* (elscreen-e21-command-line): Ditto.
+	* (elscreen-xmas-command-line-1): New advice.
+
+
+2005-11-11  Naoto Morishima  <naoto@morishima.net>
+
+	* Collect codes for mode-line, tab and menu together, and clean up
+	  tab and mode-line code for GNU Emacs.
 	* Delete trailing whitespaces.
 
 

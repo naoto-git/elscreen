@@ -2,10 +2,9 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0rc7 (November 11, 2005)")
+(defconst elscreen-version "1.4.0rc8 (November 11, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
-;;              Nara Institute of Science and Technology, Japan
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
@@ -64,6 +63,18 @@
   :tag "Default buffer name"
   :group 'elscreen)
 
+(defcustom elscreen-default-buffer-initial-major-mode initial-major-mode
+  "Major mode command symbol to use for the default buffer."
+  :type 'function
+  :group 'elscreen)
+
+(defcustom elscreen-default-buffer-initial-message initial-scratch-message
+  "Initial message displayed in default buffer.
+If this is nil, no message will be displayed."
+  :type '(choice (text :tag "Message")
+                 (const :tag "none" nil))
+  :group 'elscreen)
+
 (defcustom elscreen-mode-to-nickname-alist
   '(("^mew-draft-mode$" . (lambda (buf) (format "Mew(%s)" (buffer-name buf))))
     ("^mew-" . "Mew")
@@ -91,8 +102,15 @@ buffer-name and corresponding screen-name."
   :tag "Buffer-name to nickname alist"
   :group 'elscreen)
 
-(defvar elscreen-display-tab-set-nil-hook nil)
+(defcustom elscreen-startup-command-line-processing t
+  "*If non-nil, ElScreen processes command line when Emacssen
+starts up, and opens files with new screen if needed."
+  :type 'boolean
+  :tag "Startup command-line processing"
+  :group 'elscreen)
+
 (static-when elscreen-on-emacs ; GNU Emacs 21
+  (defvar elscreen-display-tab-set-nil-hook nil)
   (defcustom elscreen-display-tab t
     "*If non-nil, display the tabs at the top of screen."
     :type 'boolean
@@ -507,7 +525,8 @@ If FRAME is omitted, selected-frame is used."
     nil)
    (t
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
-	  (screen 0))
+	  (screen 0)
+          (default-buffer (get-buffer elscreen-default-buffer-name)))
       (elscreen-set-window-configuration
        (elscreen-get-current-screen)
        (elscreen-current-window-configuration))
@@ -515,7 +534,12 @@ If FRAME is omitted, selected-frame is used."
 	(setq screen (+ screen 1)))
       (save-window-excursion
 	(delete-other-windows)
-	(switch-to-buffer elscreen-default-buffer-name)
+        (if default-buffer
+            (switch-to-buffer default-buffer)
+          (switch-to-buffer (get-buffer-create elscreen-default-buffer-name))
+	  (funcall elscreen-default-buffer-initial-major-mode)
+          (insert elscreen-default-buffer-initial-message)
+          (set-buffer-modified-p nil))
 	(elscreen-set-window-configuration
 	 screen
 	 (elscreen-current-window-configuration)))
@@ -945,8 +969,9 @@ is ommitted, current-screen will survive."
 			 'menu-item
 			 screen-name
 			 'elscreen-jump
-			 :key-sequence (format "%s%d"
-					       elscreen-prefix-key screen))))
+			 :keys (format "%s %d"
+				       (key-description elscreen-prefix-key)
+				       screen))))
 	       screen-list))
 	(setq elscreen-menu
 	      (nconc elscreen-menu elscreen-menu-bar-command-entries))
@@ -1074,7 +1099,7 @@ is ommitted, current-screen will survive."
 	    (unless (equal elscreen-e21-tab-format header-line-format)
 	      (setq header-line-format elscreen-e21-tab-format)))))))
 
-  (elscreen-e21-tab-update t)
+  (add-hook 'emacs-startup-hook (lambda () (elscreen-e21-tab-update t)))
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update))
 
 ;; XEmacs
@@ -1130,8 +1155,9 @@ is ommitted, current-screen will survive."
 		 (vector screen-name
 			 `(elscreen-goto ,screen)
 			 :active t
-			 ;; :keys (format "%s %d" elscreen-prefix-key screen)
-			 :keys (format "%s %d" "C-z" screen)
+			 :keys (format "%s %d"
+				       (key-description elscreen-prefix-key)
+				       screen)
 			 )))
 	     screen-list))
       (append elscreen-menu menu))))
@@ -1321,6 +1347,84 @@ creating one if none already exists."
       (select-window (split-window)))
     (command-execute this-command t)))
 
+;; Startup: command-line processing
+
+(defun elscreen-command-line-find-file (file file-count &optional line column)
+  (let ((line (or line 0))
+	(column (or column 0)))
+    (cond
+     ((= file-count 1)
+      (find-file file))
+     ((> file-count 10)
+      (elscreen-goto (mod (1- file-count) 10))
+      (elscreen-find-file file))
+     (t
+      (elscreen-find-file file)))
+    (or (zerop line)
+	(goto-line line))
+    (unless (< column 1)
+      (move-to-column (1- column)))
+    (elscreen-goto 0)
+    (elscreen-set-previous-screen nil)))
+
+(static-when elscreen-on-emacs
+  (defun elscreen-e21-command-line ()
+    (if (string-match "\\`-" argi)
+	(error "Unknown option `%s'" argi))
+    (setq file-count (1+ file-count))
+    (setq inhibit-startup-buffer-menu t)
+    (let* ((line 0)
+	   (column 0)
+	   (file
+	    (expand-file-name
+	     (command-line-normalize-file-name orig-argi)
+	     dir)))
+      (elscreen-command-line-find-file file file-count line column))
+    t)
+
+  (when elscreen-startup-command-line-processing
+    (add-hook 'after-init-hook (lambda ()
+				 (add-to-list 'command-line-functions
+					      'elscreen-e21-command-line t)))))
+
+(static-when elscreen-on-xemacs
+  (defadvice command-line-1 (around elscreen-xmas-command-line-1 activate disable)
+    (cond
+     ((null command-line-args-left)
+      ad-do-it)
+     (t
+      (let ((dir command-line-default-directory)
+	    (file-count 0)
+	    (line nil)
+	    (end-of-options nil)
+	    file-p arg tem)
+	(while command-line-args-left
+	  (setq arg (pop command-line-args-left))
+	  (cond
+	   (end-of-options
+	    (setq file-p t))
+	   ((setq tem (when (eq (aref arg 0) ?-)
+			(or (assoc arg command-switch-alist)
+			    (assoc (substring arg 1)
+				   command-switch-alist))))
+	    (funcall (cdr tem) arg))
+	   ((string-match "\\`\\+[0-9]+\\'" arg)
+	    (setq line (string-to-int arg)))
+	   ((or (string= arg "-") (string= arg "--"))
+	    (setq end-of-options t))
+	   (t
+	    (setq file-p t)))
+
+	  (when file-p
+	    (setq file-p nil)
+	    (incf file-count)
+	    (elscreen-command-line-find-file
+	     (expand-file-name arg dir) file-count line)
+	    (setq line nil)))))))
+
+  (when elscreen-startup-command-line-processing
+    (ad-enable-advice 'command-line-1 'around 'elscreen-xmas-command-line-1)
+    (ad-activate 'command-line-1)))
 
 ;; Unsupported Functions...
 
