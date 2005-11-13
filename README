@@ -42,6 +42,7 @@ You may use following sequences on ElScreen:
     C-z         ElScreen prefix key
     C-z C-c     Create new screen
     C-z k       Kill the current screen
+    C-z K       Kill screens other than current one
     C-z C-p     Switch to the previous screen
     C-z C-n     Switch to the next screen
     C-z C-a     Toggle screens
@@ -60,9 +61,6 @@ Setup
 -----
 You can set the following variables to configure ElScreen.  These
 can be set in .emacs file directly or "Options" in your menu bar.
-
-(defcustom elscreen-default-buffer-name "*scratch*"
-
 
     elscreen-prefix-key
     
@@ -99,6 +97,12 @@ can be set in .emacs file directly or "Options" in your menu bar.
             ("-telnet" . "telnet")
             ("dict" . "OnlineDict")
             ("*WL:Message*" . "Wanderlust"))
+
+    elscreen-startup-command-line-processing
+
+        If non nil, ElScreen processes command line arguments of
+	Emacssen when starting up, and opens files with new
+	screens if needed.  The default value is `t'.
 
     elscreen-display-tab (only for GNU Emacs 21)
 

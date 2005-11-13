@@ -1,5 +1,17 @@
 2005-11-13  Naoto Morishima  <naoto@morishima.net>
 
+	* elscreen-mode-to-nickname-alist-symbol-list: New variable.
+	* elscreen-mode-to-nickname-alist-internal: Ditto.
+	* (elscreen-rebuild-mode-to-nickname-alist): New function.
+	* (elscreen-set-mode-to-nickname-alist): Ditto.
+	* elscreen-buffer-to-nickname-alist-symbol-list: New variable.
+	* elscreen-buffer-to-nickname-alist-internal: Ditto.
+	* (elscreen-rebuild-buffer-to-nickname-alist): New function.
+	* (elscreen-set-buffer-to-nickname-alist): Ditto.
+
+
+2005-11-12  Naoto Morishima  <naoto@morishima.net>
+
 	* elscreen-default-buffer-initial-major-mode: New variable.
 	* elscreen-default-buffer-initial-message: Ditto.
 	* (elscreen-create-internal): Insert default message and set

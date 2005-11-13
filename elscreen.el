@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0rc8 (November 11, 2005)")
+(defconst elscreen-version "1.4.0rc9 (November 12, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 11, 2005
+;; Revised:  November 12, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -86,8 +86,12 @@ If this is nil, no message will be displayed."
     ("^Info-mode$" . "Info")
     ("^lookup-" . "Lookup"))
   "*Alist composed of the pair of mode-name and corresponding screen-name."
-  :type 'sexp
+  :type '(alist :key-type string :value-type (choice string function))
   :tag "Major-mode to nickname alist"
+  :set (lambda (symbol value)
+	 (custom-set-default symbol value)
+	 (when (fboundp 'elscreen-rebuild-mode-to-nickname-alist)
+	   (elscreen-rebuild-mode-to-nickname-alist)))
   :group 'elscreen)
 
 (defcustom elscreen-buffer-to-nickname-alist
@@ -98,8 +102,12 @@ If this is nil, no message will be displayed."
     ("*WL:Message*" . "Wanderlust"))
   "*Alist composed of the pair of regular expression of
 buffer-name and corresponding screen-name."
-  :type 'sexp
+  :type '(alist :key-type string :value-type (choice string function))
   :tag "Buffer-name to nickname alist"
+  :set (lambda (symbol value)
+	 (custom-set-default symbol value)
+	 (when (fboundp 'elscreen-rebuild-buffer-to-nickname-alist)
+	   (elscreen-rebuild-buffer-to-nickname-alist)))
   :group 'elscreen)
 
 (defcustom elscreen-startup-command-line-processing t
@@ -629,7 +637,7 @@ Default value for SEC is 3."
   (message nil))
 
 
-;; Create & Kill & Goto
+;;; Create & Kill & Goto
 
 (defun elscreen-create ()
   "Create a new screen."
@@ -712,7 +720,7 @@ is ommitted, current-screen will survive."
     (elscreen-goto-internal screen)
     (static-when elscreen-on-xemacs
       (elscreen-screen-number-string-update))
-;    (redraw-frame (selected-frame)) ; XXX?
+;;    (redraw-frame (selected-frame)) ; XXX?
     (elscreen-notify-screen-modification 'force)
     (run-hooks 'elscreen-goto-hook)
     screen)
@@ -797,6 +805,32 @@ is ommitted, current-screen will survive."
 				  screen-nickname)))
     (elscreen-notify-screen-modification 'force))
 
+(defvar elscreen-mode-to-nickname-alist-symbol-list nil)
+(defvar elscreen-mode-to-nickname-alist-internal nil)
+(defun elscreen-rebuild-mode-to-nickname-alist ()
+  (setq elscreen-mode-to-nickname-alist-internal
+	(apply 'append
+	       (mapcar 'symbol-value
+		       elscreen-mode-to-nickname-alist-symbol-list))))
+(defun elscreen-set-mode-to-nickname-alist (mode-to-nickname-alist-symbol)
+  (add-to-list 'elscreen-mode-to-nickname-alist-symbol-list
+	       mode-to-nickname-alist-symbol)
+  (elscreen-rebuild-mode-to-nickname-alist))
+(elscreen-set-mode-to-nickname-alist 'elscreen-mode-to-nickname-alist)
+
+(defvar elscreen-buffer-to-nickname-alist-symbol-list nil)
+(defvar elscreen-buffer-to-nickname-alist-internal nil)
+(defun elscreen-rebuild-buffer-to-nickname-alist ()
+  (setq elscreen-buffer-to-nickname-alist-internal
+	(apply 'append
+	       (mapcar 'symbol-value
+		       elscreen-buffer-to-nickname-alist-symbol-list))))
+(defun elscreen-set-buffer-to-nickname-alist (buffer-to-nickname-alist-symbol)
+  (add-to-list 'elscreen-buffer-to-nickname-alist-symbol-list
+	       buffer-to-nickname-alist-symbol)
+  (elscreen-rebuild-buffer-to-nickname-alist))
+(elscreen-set-buffer-to-nickname-alist 'elscreen-buffer-to-nickname-alist)
+
 (defmacro elscreen-get-alist-to-nickname (alist op cond)
   ( `(catch '(, alist)
        (progn
@@ -836,10 +870,10 @@ is ommitted, current-screen will survive."
 		    (cons
 		     (or
 		      (elscreen-get-alist-to-nickname
-		       elscreen-mode-to-nickname-alist
+		       elscreen-mode-to-nickname-alist-internal
 		       string-match (symbol-name major-mode))
 		      (elscreen-get-alist-to-nickname
-		       elscreen-buffer-to-nickname-alist
+		       elscreen-buffer-to-nickname-alist-internal
 		       string-match (buffer-name))
 		      (cons 'buffer-name (buffer-name)))
 		     nickname-list)))
@@ -892,7 +926,7 @@ is ommitted, current-screen will survive."
       screen-list "  "))))
 
 
-;; Mode Line & Menu & Tab
+;;; Mode Line & Menu & Tab
 
 ;; GNU Emacs
 (static-when elscreen-on-emacs
@@ -1162,7 +1196,7 @@ is ommitted, current-screen will survive."
 	     screen-list))
       (append elscreen-menu menu))))
 
-;; Help
+;;; Help
 
 (defun elscreen-help ()
   "Help about screen functions."
@@ -1184,7 +1218,7 @@ is ommitted, current-screen will survive."
 (elscreen-add-help)
 
 
-;; Utility Functions
+;;; Utility Functions
 
 (defun elscreen-display-version ()
   "Display ElScreen version."
@@ -1347,7 +1381,7 @@ creating one if none already exists."
       (select-window (split-window)))
     (command-execute this-command t)))
 
-;; Startup: command-line processing
+;;; Command-line processing at startup time
 
 (defun elscreen-command-line-find-file (file file-count &optional line column)
   (let ((line (or line 0))
@@ -1368,65 +1402,62 @@ creating one if none already exists."
     (elscreen-set-previous-screen nil)))
 
 (static-when elscreen-on-emacs
-  (defun elscreen-e21-command-line ()
-    (if (string-match "\\`-" argi)
-	(error "Unknown option `%s'" argi))
-    (setq file-count (1+ file-count))
-    (setq inhibit-startup-buffer-menu t)
-    (let* ((line 0)
-	   (column 0)
-	   (file
-	    (expand-file-name
-	     (command-line-normalize-file-name orig-argi)
-	     dir)))
-      (elscreen-command-line-find-file file file-count line column))
-    t)
-
   (when elscreen-startup-command-line-processing
+    (defun elscreen-e21-command-line ()
+      (if (string-match "\\`-" argi)
+	  (error "Unknown option `%s'" argi))
+      (setq file-count (1+ file-count))
+      (setq inhibit-startup-buffer-menu t)
+      (let* ((line 0)
+	     (column 0)
+	     (file
+	      (expand-file-name
+	       (command-line-normalize-file-name orig-argi)
+	       dir)))
+	(elscreen-command-line-find-file file file-count line column))
+      t)
+
     (add-hook 'after-init-hook (lambda ()
 				 (add-to-list 'command-line-functions
 					      'elscreen-e21-command-line t)))))
 
 (static-when elscreen-on-xemacs
-  (defadvice command-line-1 (around elscreen-xmas-command-line-1 activate disable)
-    (cond
-     ((null command-line-args-left)
-      ad-do-it)
-     (t
-      (let ((dir command-line-default-directory)
-	    (file-count 0)
-	    (line nil)
-	    (end-of-options nil)
-	    file-p arg tem)
-	(while command-line-args-left
-	  (setq arg (pop command-line-args-left))
-	  (cond
-	   (end-of-options
-	    (setq file-p t))
-	   ((setq tem (when (eq (aref arg 0) ?-)
-			(or (assoc arg command-switch-alist)
-			    (assoc (substring arg 1)
-				   command-switch-alist))))
-	    (funcall (cdr tem) arg))
-	   ((string-match "\\`\\+[0-9]+\\'" arg)
-	    (setq line (string-to-int arg)))
-	   ((or (string= arg "-") (string= arg "--"))
-	    (setq end-of-options t))
-	   (t
-	    (setq file-p t)))
-
-	  (when file-p
-	    (setq file-p nil)
-	    (incf file-count)
-	    (elscreen-command-line-find-file
-	     (expand-file-name arg dir) file-count line)
-	    (setq line nil)))))))
-
   (when elscreen-startup-command-line-processing
-    (ad-enable-advice 'command-line-1 'around 'elscreen-xmas-command-line-1)
-    (ad-activate 'command-line-1)))
+    (defadvice command-line-1 (around elscreen-xmas-command-line-1 activate)
+      (cond
+       ((null command-line-args-left)
+	ad-do-it)
+       (t
+	(let ((dir command-line-default-directory)
+	      (file-count 0)
+	      (line nil)
+	      (end-of-options nil)
+	      file-p arg tem)
+	  (while command-line-args-left
+	    (setq arg (pop command-line-args-left))
+	    (cond
+	     (end-of-options
+	      (setq file-p t))
+	     ((setq tem (when (eq (aref arg 0) ?-)
+			  (or (assoc arg command-switch-alist)
+			      (assoc (substring arg 1)
+				     command-switch-alist))))
+	      (funcall (cdr tem) arg))
+	     ((string-match "\\`\\+[0-9]+\\'" arg)
+	      (setq line (string-to-int arg)))
+	     ((or (string= arg "-") (string= arg "--"))
+	      (setq end-of-options t))
+	     (t
+	      (setq file-p t)))
 
-;; Unsupported Functions...
+	    (when file-p
+	      (setq file-p nil)
+	      (incf file-count)
+	      (elscreen-command-line-find-file
+	       (expand-file-name arg dir) file-count line)
+	      (setq line nil)))))))))
+
+;;; Unsupported Functions...
 
 (defun elscreen-link ()
   (interactive)
