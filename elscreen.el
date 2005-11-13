@@ -811,7 +811,8 @@ is ommitted, current-screen will survive."
   (setq elscreen-mode-to-nickname-alist-internal
 	(apply 'append
 	       (mapcar 'symbol-value
-		       elscreen-mode-to-nickname-alist-symbol-list))))
+		       elscreen-mode-to-nickname-alist-symbol-list)))
+  (elscreen-notify-screen-modification 'force-immediately))
 (defun elscreen-set-mode-to-nickname-alist (mode-to-nickname-alist-symbol)
   (add-to-list 'elscreen-mode-to-nickname-alist-symbol-list
 	       mode-to-nickname-alist-symbol)
@@ -824,7 +825,8 @@ is ommitted, current-screen will survive."
   (setq elscreen-buffer-to-nickname-alist-internal
 	(apply 'append
 	       (mapcar 'symbol-value
-		       elscreen-buffer-to-nickname-alist-symbol-list))))
+		       elscreen-buffer-to-nickname-alist-symbol-list)))
+  (elscreen-notify-screen-modification 'force-immediately))
 (defun elscreen-set-buffer-to-nickname-alist (buffer-to-nickname-alist-symbol)
   (add-to-list 'elscreen-buffer-to-nickname-alist-symbol-list
 	       buffer-to-nickname-alist-symbol)
@@ -1408,13 +1410,13 @@ creating one if none already exists."
 	  (error "Unknown option `%s'" argi))
       (setq file-count (1+ file-count))
       (setq inhibit-startup-buffer-menu t)
-      (let* ((line 0)
-	     (column 0)
-	     (file
+      (let* ((file
 	      (expand-file-name
 	       (command-line-normalize-file-name orig-argi)
 	       dir)))
 	(elscreen-command-line-find-file file file-count line column))
+	(setq line 0)
+	(setq column 0)
       t)
 
     (add-hook 'after-init-hook (lambda ()
