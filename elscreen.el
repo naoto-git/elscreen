@@ -642,7 +642,6 @@ Default value for SEC is 3."
 
 (elscreen-make-frame-confs (selected-frame))
 
-
 ;;; Create & Kill & Goto
 
 (defun elscreen-create ()
@@ -1217,8 +1216,8 @@ is ommitted, current-screen will survive."
   (with-output-to-temp-buffer "*ElScreen Help*"
     (princ (substitute-command-keys 
 	    (mapconcat 'symbol-value
-		       elscreen-help-symbol-list "\n\n")))))
-
+		       elscreen-help-symbol-list "\n\n")))
+    (print-help-return-message)))
 
 ;;; Utility Functions
 
