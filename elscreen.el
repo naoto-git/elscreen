@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0rc9 (November 12, 2005)")
+(defconst elscreen-version "1.4.0rc10 (November 14, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 12, 2005
+;; Revised:  November 14, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -272,13 +272,23 @@ starts up, and opens files with new screen if needed."
 
 ;;; Code:
 
-; Window configuration handling
+(defvar elscreen-frame-confs nil
+  "*Alist that contains the information about screen configurations.")
 
 (defun elscreen-current-window-configuration ()
   (list (current-window-configuration) (point-marker)))
 
-(defvar elscreen-frame-confs nil
-  "*Alist that contains the information about screen configurations.")
+(defun elscreen-default-window-configuration ()
+  (let ((default-buffer (get-buffer elscreen-default-buffer-name)))
+    (save-window-excursion
+      (delete-other-windows)
+      (if default-buffer
+	  (switch-to-buffer default-buffer)
+	(switch-to-buffer (get-buffer-create elscreen-default-buffer-name))
+	(funcall elscreen-default-buffer-initial-major-mode)
+	(insert elscreen-default-buffer-initial-message)
+	(set-buffer-modified-p nil))
+      (elscreen-current-window-configuration))))
 
 (defun get-alist (key alist)
   (cdr (assoc key alist)))
@@ -287,16 +297,21 @@ starts up, and opens files with new screen if needed."
   (get-alist frame elscreen-frame-confs))
 
 (defun elscreen-make-frame-confs (frame)
-  (if (null (elscreen-get-frame-confs frame))
-      (set-alist 'elscreen-frame-confs
-		 frame (list
-			(cons 'status
-			      (list (cons 'current-screen 0)
-				    (cons 'previous-screen nil)
-				    (cons 'modified-inquirer nil)))
-			(cons 'window-configuration
-			      (list (cons 0 (elscreen-current-window-configuration))))
-			(cons 'screen-nickname nil)))))
+  (when (null (elscreen-get-frame-confs frame))
+    (let ((selected-frame (selected-frame)))
+      (select-frame frame)
+      (set-alist 'elscreen-frame-confs frame
+		 (list
+		  (cons 'status
+			(list (cons 'current-screen 0)
+			      (cons 'previous-screen nil)
+			      (cons 'modified-inquirer nil)))
+		  (cons 'window-configuration
+			(list (cons 0 (elscreen-default-window-configuration))))
+		  (cons 'screen-nickname nil)))
+      (elscreen-goto-internal 0)
+      (select-frame selected-frame)
+      (elscreen-notify-screen-modification 'force-immediately))))
 
 (defun elscreen-delete-frame-confs (frame)
   (remove-alist 'elscreen-frame-confs frame))
@@ -307,7 +322,6 @@ starts up, and opens files with new screen if needed."
  (t ; XEmacs
   (add-hook 'create-frame-hook 'elscreen-make-frame-confs)))
 (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)
-(elscreen-make-frame-confs (selected-frame))
 
 (defsubst elscreen-get-conf-list (frame type)
   (get-alist type (elscreen-get-frame-confs frame)))
@@ -533,24 +547,14 @@ If FRAME is omitted, selected-frame is used."
     nil)
    (t
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
-	  (screen 0)
-          (default-buffer (get-buffer elscreen-default-buffer-name)))
+	  (screen 0))
       (elscreen-set-window-configuration
        (elscreen-get-current-screen)
        (elscreen-current-window-configuration))
       (while (eq (nth screen screen-list) screen)
 	(setq screen (+ screen 1)))
-      (save-window-excursion
-	(delete-other-windows)
-        (if default-buffer
-            (switch-to-buffer default-buffer)
-          (switch-to-buffer (get-buffer-create elscreen-default-buffer-name))
-	  (funcall elscreen-default-buffer-initial-major-mode)
-          (insert elscreen-default-buffer-initial-message)
-          (set-buffer-modified-p nil))
-	(elscreen-set-window-configuration
-	 screen
-	 (elscreen-current-window-configuration)))
+      (elscreen-set-window-configuration
+       screen (elscreen-default-window-configuration))
       (elscreen-notify-screen-modification 'force)
       (run-hooks 'elscreen-create-hook)
       screen))))
@@ -635,6 +639,8 @@ Default value for SEC is 3."
     (message "%s" message)
     (sit-for (or sec 3)))
   (message nil))
+
+(elscreen-make-frame-confs (selected-frame))
 
 
 ;;; Create & Kill & Goto

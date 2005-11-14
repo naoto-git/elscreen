@@ -1,3 +1,10 @@
+2005-11-14  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-default-window-configuration): New function.
+	* (elscreen-make-frame-confs): Set screen 0 to the default
+	  window configuration.
+
+
 2005-11-13  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen-mode-to-nickname-alist-symbol-list: New variable.
