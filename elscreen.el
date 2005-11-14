@@ -1206,24 +1206,18 @@ is ommitted, current-screen will survive."
 
 ;;; Help
 
+(defvar elscreen-help-symbol-list nil)
+(defun elscreen-set-help (help-symbol)
+  (add-to-list 'elscreen-help-symbol-list help-symbol t))
+(elscreen-set-help 'elscreen-help)
+
 (defun elscreen-help ()
   "Help about screen functions."
   (interactive)
   (with-output-to-temp-buffer "*ElScreen Help*"
-    (princ (documentation 'elscreen-help-mode))
-    (print-help-return-message)))
-
-(defun elscreen-add-help (&optional additional-help)
-  (if additional-help
-      (setq elscreen-help (concat elscreen-help
-				  (format "\n\n")
-				  additional-help)))
-  (let ((help-function
-	 (list 'defun 'elscreen-help-mode '()
-	       elscreen-help)))
-    (eval help-function)))
-
-(elscreen-add-help)
+    (princ (substitute-command-keys 
+	    (mapconcat 'symbol-value
+		       elscreen-help-symbol-list "\n\n")))))
 
 
 ;;; Utility Functions

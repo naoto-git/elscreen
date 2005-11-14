@@ -3,6 +3,10 @@
 	* (elscreen-default-window-configuration): New function.
 	* (elscreen-make-frame-confs): Set screen 0 to the default
 	  window configuration.
+	* (elscreen-add-help): Renamed to...
+	* (elscreen-set-help): this, and now argument of this function
+	  should be symbol of help string.
+	* (elscreen-help): Rewritten.
 
 
 2005-11-13  Naoto Morishima  <naoto@morishima.net>
