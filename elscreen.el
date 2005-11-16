@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0rc10 (November 14, 2005)")
+(defconst elscreen-version "1.4.0rc12 (November 16, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 14, 2005
+;; Revised:  November 16, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -278,6 +278,12 @@ starts up, and opens files with new screen if needed."
 (defun elscreen-current-window-configuration ()
   (list (current-window-configuration) (point-marker)))
 
+(defun elscreen-apply-window-configuration (elscreen-window-configuration)
+  (let ((window-configuration (car elscreen-window-configuration))
+        (marker (cadr elscreen-window-configuration)))
+    (set-window-configuration window-configuration)
+    (and (marker-buffer marker) (goto-char marker))))
+
 (defun elscreen-default-window-configuration ()
   (let ((default-buffer (get-buffer elscreen-default-buffer-name)))
     (save-window-excursion
@@ -296,10 +302,15 @@ starts up, and opens files with new screen if needed."
 (defsubst elscreen-get-frame-confs (frame)
   (get-alist frame elscreen-frame-confs))
 
-(defun elscreen-make-frame-confs (frame)
+(defun elscreen-make-frame-confs (frame &optional keep-window-configuration)
   (when (null (elscreen-get-frame-confs frame))
-    (let ((selected-frame (selected-frame)))
+    (let ((selected-frame (selected-frame))
+	  elscreen-window-configuration)
       (select-frame frame)
+      (setq elscreen-window-configuration
+	    (if keep-window-configuration
+		(elscreen-current-window-configuration)
+	      (elscreen-default-window-configuration)))
       (set-alist 'elscreen-frame-confs frame
 		 (list
 		  (cons 'status
@@ -307,21 +318,34 @@ starts up, and opens files with new screen if needed."
 			      (cons 'previous-screen nil)
 			      (cons 'modified-inquirer nil)))
 		  (cons 'window-configuration
-			(list (cons 0 (elscreen-default-window-configuration))))
+			(list (cons 0 elscreen-window-configuration)))
 		  (cons 'screen-nickname nil)))
-      (elscreen-goto-internal 0)
-      (select-frame selected-frame)
-      (elscreen-notify-screen-modification 'force-immediately))))
+      (elscreen-apply-window-configuration elscreen-window-configuration)
+      (elscreen-notify-screen-modification 'force-immediately)
+      (select-frame selected-frame))))
 
 (defun elscreen-delete-frame-confs (frame)
-  (remove-alist 'elscreen-frame-confs frame))
+  (remove-alist 'elscreen-frame-confs frame)
+  (when (eq frame (selected-frame))
+    (select-frame (previous-frame))
+    (elscreen-notify-screen-modification 'force-immediately)))
+
+(defun elscreen-bootstrap ()
+  (mapcar
+   (lambda (frame)
+     (elscreen-make-frame-confs frame 'keep))
+   (frame-list)))
 
 (static-cond
  ((boundp 'after-make-frame-functions) ; GNU Emacs 21
   (add-hook 'after-make-frame-functions 'elscreen-make-frame-confs))
  (t ; XEmacs
   (add-hook 'create-frame-hook 'elscreen-make-frame-confs)))
-(add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)
+(static-cond
+ ((boundp 'delete-frame-functions) ; GNU Emacs 22?
+  (add-hook 'delete-frame-functions 'elscreen-delete-frame-confs))
+ (t ; XEmacs
+  (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)))
 
 (defsubst elscreen-get-conf-list (frame type)
   (get-alist type (elscreen-get-frame-confs frame)))
@@ -413,8 +437,8 @@ starts up, and opens files with new screen if needed."
     (setq elscreen-screen-modified-hook-pwc
 	  (current-window-configuration))
     (elscreen-set-screen-modified)
-    (if (eq mode 'force-immediately)
-	(elscreen-run-screen-update-hook))))
+    (when (eq mode 'force-immediately)
+      (elscreen-run-screen-update-hook))))
 
 (defmacro elscreen-screen-modified-hook-setup (&rest hooks-and-functions)
   (cons
@@ -533,10 +557,9 @@ If FRAME is omitted, selected-frame is used."
 	     (bury-buffer (car (buffer-list)))))))))
 
 (defun elscreen-goto-internal (screen)
-  (let* ((window-configuration (elscreen-get-window-configuration screen))
-	 (marker (cadr window-configuration)))
-    (set-window-configuration (car window-configuration))
-    (and (marker-buffer marker) (goto-char marker))))
+  (let ((elscreen-window-configuration
+	 (elscreen-get-window-configuration screen)))
+    (elscreen-apply-window-configuration elscreen-window-configuration)))
 
 (defvar elscreen-create-hook nil)
 (defun elscreen-create-internal (&optional noerror)
@@ -639,8 +662,6 @@ Default value for SEC is 3."
     (message "%s" message)
     (sit-for (or sec 3)))
   (message nil))
-
-(elscreen-make-frame-confs (selected-frame))
 
 ;;; Create & Kill & Goto
 
@@ -797,7 +818,7 @@ is ommitted, current-screen will survive."
 				       previous-window-configuration)
     (elscreen-set-window-configuration previous-screen
 				       current-window-configuration)
-    (elscreen-goto-internal current-screen)))
+    (elscreen-apply-window-configuration previous-window-configuration)))
 
 (defun elscreen-screen-nickname (screen-nickname)
   "Set nickname for current screen to SCREEN-NICKNAME."
@@ -1040,7 +1061,6 @@ is ommitted, current-screen will survive."
       (define-key keymap [header-line mouse-2] action)
       keymap))
 
-  (elscreen-e21-menu-bar-update t)
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
 
   ;; Tab
@@ -1076,16 +1096,16 @@ is ommitted, current-screen will survive."
 	  (with-current-buffer (window-buffer window-with-tab)
 	    (kill-local-variable 'elscreen-e21-tab-format)
 	    (when elscreen-tab-display-create-screen
-	      (setq elscreen-e21-tab-format
-		    (nconc
-		     elscreen-e21-tab-format
-		     (list
-		      (propertize
-		       "[!]"
-		       'face 'elscreen-tab-current-screen-face
-		       'local-map (elscreen-e21-tab-create-keymap
-				   'elscreen-create))
-		      tab-separator))))
+	      (seq elscreen-e21-tab-format
+		   (nconc
+		    elscreen-e21-tab-format
+		    (list
+		     (propertize
+		      "[!]"
+		      'face 'elscreen-tab-current-screen-face
+		      'local-map (elscreen-e21-tab-create-keymap
+				  'elscreen-create))
+		     tab-separator))))
 
 	    (mapcar
 	     (lambda (screen)
@@ -1140,7 +1160,6 @@ is ommitted, current-screen will survive."
 	    (unless (equal elscreen-e21-tab-format header-line-format)
 	      (setq header-line-format elscreen-e21-tab-format)))))))
 
-  (add-hook 'emacs-startup-hook (lambda () (elscreen-e21-tab-update t)))
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update))
 
 ;; XEmacs
@@ -1214,7 +1233,7 @@ is ommitted, current-screen will survive."
   "Help about screen functions."
   (interactive)
   (with-output-to-temp-buffer "*ElScreen Help*"
-    (princ (substitute-command-keys 
+    (princ (substitute-command-keys
 	    (mapconcat 'symbol-value
 		       elscreen-help-symbol-list "\n\n")))
     (print-help-return-message)))
@@ -1487,3 +1506,7 @@ creating one if none already exists."
 	(switch-to-buffer elscreen-split-buffer)
 	(elscreen-goto (elscreen-get-previous-screen)))
     (elscreen-message "cannot split screen!")))
+
+;;; Now start ElScreen!
+
+(elscreen-bootstrap)
