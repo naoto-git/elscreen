@@ -1096,16 +1096,16 @@ is ommitted, current-screen will survive."
 	  (with-current-buffer (window-buffer window-with-tab)
 	    (kill-local-variable 'elscreen-e21-tab-format)
 	    (when elscreen-tab-display-create-screen
-	      (seq elscreen-e21-tab-format
-		   (nconc
-		    elscreen-e21-tab-format
-		    (list
-		     (propertize
-		      "[!]"
-		      'face 'elscreen-tab-current-screen-face
-		      'local-map (elscreen-e21-tab-create-keymap
-				  'elscreen-create))
-		     tab-separator))))
+	      (setq elscreen-e21-tab-format
+		    (nconc
+		     elscreen-e21-tab-format
+		     (list
+		      (propertize
+		       "[!]"
+		       'face 'elscreen-tab-current-screen-face
+		       'local-map (elscreen-e21-tab-create-keymap
+				   'elscreen-create))
+		      tab-separator))))
 
 	    (mapcar
 	     (lambda (screen)
@@ -1507,6 +1507,6 @@ creating one if none already exists."
 	(elscreen-goto (elscreen-get-previous-screen)))
     (elscreen-message "cannot split screen!")))
 
-;;; Now start ElScreen!
+;;; Start ElScreen!
 
 (elscreen-bootstrap)
