@@ -1,3 +1,8 @@
+2005-11-20  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.4.0 released.
+
+
 2005-11-16  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-apply-window-configuration): New function.

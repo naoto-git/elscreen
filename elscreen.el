@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0rc12 (November 16, 2005)")
+(defconst elscreen-version "1.4.0 (November 16, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el

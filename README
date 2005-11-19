@@ -1,6 +1,6 @@
 ElScreen 1.4.0 README file
 
-This is the distribution of ElScreen 1.4.0, released XXXX 2005. 
+This is the distribution of ElScreen 1.4.0, released November 2005. 
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on 
 terminal.
@@ -78,8 +78,7 @@ can be set in .emacs file directly or "Options" in your menu bar.
         only when major-mode cannot determine its screen nickname.
 	The default value is:
 
-          '(("^wl-" . "Wanderlust")
-            ("^mew-" . "Mew")
+          '(("^mew-" . "Mew")
             ("^irchat-" . "IRChat")
             ("^liece-" . "Liece")
             ("^dired-mode$" . "Dired")
