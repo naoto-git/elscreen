@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.0 (November 16, 2005)")
+(defconst elscreen-version "1.4.1 (November 21, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 16, 2005
+;; Revised:  November 21, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -227,6 +227,7 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "j"    'elscreen-link)
 (define-key elscreen-map "s"    'elscreen-split)
 (define-key elscreen-map "\C-f" 'elscreen-find-file)
+(define-key elscreen-map "\C-r" 'elscreen-find-file-read-only)
 (define-key elscreen-map "\M-x" 'elscreen-execute-extended-command)
 
 (defun elscreen-set-prefix-key (prefix-key)
@@ -649,7 +650,7 @@ If FRAME is omitted, selected-frame is used."
 
 (defun elscreen-get-screen-create (buffer) ;# obsolete
   (elscreen-message "`elscreen-get-screen' is obsoleted. Use `elscreen-find-and-goto-by-buffer' instead.")
-  (elscreen-find-and-goto-by-buffer (get-buffer-create buffer) t))
+  (elscreen-find-and-goto-by-buffer (get-buffer-create buffer) 'create))
 (make-obsolete 'elscreen-get-screen-create 'elscreen-find-and-goto-by-buffer)
 
 (defvar elscreen-last-message "Welcome to ElScreen!"
@@ -1351,7 +1352,7 @@ is ommitted, current-screen will survive."
      (t
       (elscreen-goto (string-to-number command-or-target-screen))))))
 
-(defun elscreen-find-and-goto-by-buffer (&optional buffer create)
+(defun elscreen-find-and-goto-by-buffer (&optional buffer create noselect)
   "Go to the screen that has the window with buffer BUFFER,
 creating one if none already exists."
   (interactive)
@@ -1363,15 +1364,32 @@ creating one if none already exists."
 		     (read-buffer prompt)))
 	 (target-screen (elscreen-find-screen-by-buffer
 			 (get-buffer-create buffer) create)))
-    (if target-screen
-	(elscreen-goto target-screen))))
+    (when target-screen
+      (elscreen-goto target-screen)
+      (unless noselect
+	(catch 'find-window
+	  (mapcar
+	   (lambda (window)
+	     (when (string= (buffer-name (window-buffer window)) buffer)
+	       (select-window window)
+	       (throw 'find-window t)))
+	   (window-list)))))
+    target-screen))
 
 (defun elscreen-find-file (filename)
   "Edit file FILENAME.
 Switch to a screen visiting file FILENAME,
 creating one if none already exists."
   (interactive "FFind file in new screen: ")
-  (elscreen-find-and-goto-by-buffer (find-file-noselect filename) t))
+  (elscreen-find-and-goto-by-buffer (find-file-noselect filename) 'create))
+
+(defun elscreen-find-file-read-only (filename)
+  "Edit file FILENAME but don't allow changes.
+Like elscreen-find-file but marks buffer as read-only.
+Use C-x C-q to permit editing."
+  (interactive "FFind file read-only in new screen: ")
+  (elscreen-find-file filename)
+  (setq buffer-read-only t))
 
 (defun elscreen-execute-extended-command (prefix-arg)
   (interactive "P")
