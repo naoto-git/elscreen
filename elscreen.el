@@ -1322,7 +1322,7 @@ is ommitted, current-screen will survive."
 		(put-text-property
 		 (match-beginning 3) (match-end 3) 'face 'bold))))
 	    (forward-line 1)))
-	(toggle-read-only 1)
+	(setq buffer-read-only t)
 	(set-buffer-modified-p nil)
         ;; make keymap for minibuffer
 	(suppress-keymap minibuffer-map t)
