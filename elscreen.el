@@ -250,25 +250,26 @@ starts up, and opens files with new screen if needed."
   (elscreen-set-prefix-key prefix-key))
 
 (defvar elscreen-help "ElScreen keys:
-       \\[elscreen-create]    Create a new screen and switch to it
-       \\[elscreen-kill]    Kill the current screen
-       \\[elscreen-kill-others]    Kill other screens
-       \\[elscreen-next]    Switch to the \"next\" screen in a cyclic order
-       \\[elscreen-previous]    Switch to the \"previous\" screen in a cyclic order
-       \\[elscreen-toggle]    Toggle to the screen selected previously
-       \\[elscreen-select-and-goto]    Jump to the specified screen
-       \\[elscreen-jump-0]
-         :      Jump to the screen #
-       \\[elscreen-jump-9]
-       \\[elscreen-display-screen-name-list]    Show list of screens
-       \\[elscreen-screen-nickname]    Name the current screen
-       \\[elscreen-display-last-message]    Show last message
-       \\[elscreen-display-time]    Show time
-       \\[elscreen-display-version]    Show ElScreen version
-       \\[elscreen-find-file]    Create new screen and open file
-       \\[elscreen-find-file-read-only]    Create new screen and open file but don't allow changes.
-       \\[elscreen-display-screen-number-toggle]    Show/hide the screen number in the mode line
-       \\[elscreen-help]    Show this help"
+  \\[elscreen-create]    Create a new screen and switch to it
+  \\[elscreen-kill]    Kill the current screen
+  \\[elscreen-kill-others]    Kill other screens
+  \\[elscreen-next]    Switch to the \"next\" screen in a cyclic order
+  \\[elscreen-previous]    Switch to the \"previous\" screen in a cyclic order
+  \\[elscreen-toggle]    Toggle to the screen selected previously
+  \\[elscreen-select-and-goto]    Jump to the specified screen
+  \\[elscreen-jump-0]
+    :      Jump to the screen #
+  \\[elscreen-jump-9]
+  \\[elscreen-display-screen-name-list]    Show list of screens
+  \\[elscreen-screen-nickname]    Name the current screen
+  \\[elscreen-display-last-message]    Show last message
+  \\[elscreen-display-time]    Show time
+  \\[elscreen-find-file]  Create new screen and open file
+  \\[elscreen-find-file-read-only]  Create new screen and open file but don't allow changes
+  \\[elscreen-execute-extended-command]  Read function name, then call it with new screen
+  \\[elscreen-display-screen-number-toggle]    Show/hide the screen number in the mode line
+  \\[elscreen-display-version]    Show ElScreen version
+  \\[elscreen-help]    Show this help"
   "*Help shown by elscreen-help-mode")
 
 
