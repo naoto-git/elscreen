@@ -1358,22 +1358,22 @@ creating one if none already exists."
   (interactive)
   (let* ((prompt "Go to the screen with specified buffer: ")
 	 (create (or create (interactive-p)))
-	 (buffer (or (and (bufferp buffer) (buffer-name buffer))
-		     (and (stringp buffer) buffer)
-		     (and (featurep 'iswitchb) (iswitchb-read-buffer prompt))
-		     (read-buffer prompt)))
+	 (buffer-name (or (and (bufferp buffer) (buffer-name buffer))
+			  (and (stringp buffer) buffer)
+			  (and (featurep 'iswitchb)
+			       (iswitchb-read-buffer prompt))
+			  (read-buffer prompt)))
 	 (target-screen (elscreen-find-screen-by-buffer
-			 (get-buffer-create buffer) create)))
+			 (get-buffer-create buffer-name) create)))
     (when target-screen
       (elscreen-goto target-screen)
       (unless noselect
-	(catch 'find-window
-	  (mapcar
-	   (lambda (window)
-	     (when (string= (buffer-name (window-buffer window)) buffer)
-	       (select-window window)
-	       (throw 'find-window t)))
-	   (window-list)))))
+	(select-window
+	 (get-alist buffer-name
+		    (mapcar
+		     (lambda (window)
+		       (cons (buffer-name (window-buffer window)) window))
+		     (window-list))))))
     target-screen))
 
 (defun elscreen-find-file (filename)
