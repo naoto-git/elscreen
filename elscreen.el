@@ -266,6 +266,7 @@ starts up, and opens files with new screen if needed."
        \\[elscreen-display-time]    Show time
        \\[elscreen-display-version]    Show ElScreen version
        \\[elscreen-find-file]    Create new screen and open file
+       \\[elscreen-find-file-read-only]    Create new screen and open file but don't allow changes.
        \\[elscreen-display-screen-number-toggle]    Show/hide the screen number in the mode line
        \\[elscreen-help]    Show this help"
   "*Help shown by elscreen-help-mode")
@@ -1384,7 +1385,7 @@ creating one if none already exists."
   (elscreen-find-and-goto-by-buffer (find-file-noselect filename) 'create))
 
 (defun elscreen-find-file-read-only (filename)
-  "Edit file FILENAME but don't allow changes.
+  "Edit file FILENAME with new screen but don't allow changes.
 Like \\[elscreen-find-file] but marks buffer as read-only.
 Use \\[toggle-read-only] to permit editing."
   (interactive "FFind file read-only in new screen: ")
