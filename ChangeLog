@@ -7,6 +7,8 @@
 
 	* (elscreen-find-and-goto-by-buffer): Select window displaying
 	  the specified buffer unless optional argument noselect is t.
+	  In addition, use `toggle-read-only' instead of setting
+	  buffer-read-only directly.
 	* (elscreen-find-file-read-only): New function.
 
 

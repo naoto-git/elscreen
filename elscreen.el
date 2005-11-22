@@ -1322,7 +1322,7 @@ is ommitted, current-screen will survive."
 		(put-text-property
 		 (match-beginning 3) (match-end 3) 'face 'bold))))
 	    (forward-line 1)))
-	(setq buffer-read-only t)
+	(toggle-read-only 1)
 	(set-buffer-modified-p nil)
         ;; make keymap for minibuffer
 	(suppress-keymap minibuffer-map t)
@@ -1385,11 +1385,11 @@ creating one if none already exists."
 
 (defun elscreen-find-file-read-only (filename)
   "Edit file FILENAME but don't allow changes.
-Like elscreen-find-file but marks buffer as read-only.
-Use C-x C-q to permit editing."
+Like \\[elscreen-find-file] but marks buffer as read-only.
+Use \\[toggle-read-only] to permit editing."
   (interactive "FFind file read-only in new screen: ")
   (elscreen-find-file filename)
-  (setq buffer-read-only t))
+  (toggle-read-only 1))
 
 (defun elscreen-execute-extended-command (prefix-arg)
   (interactive "P")
