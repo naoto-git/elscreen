@@ -10,6 +10,8 @@
 	* elscreen-menu-bar-command-entries: Renamed to...
 	* elscreen-e21-menu-bar-command-entries: this, or...
 	* elscreen-xmas-menu-bar-command-entries: this, properly.
+	* (elscreen-e21-tab-update): Avoid unnecessary call of
+	  elscreen-get-screen-name-to-alist.
 
 
 2005-11-26  Naoto Morishima  <naoto@morishima.net>
@@ -115,7 +117,7 @@
 	  `elscreen-screen-update-hook' any more.
 	* (elscreen-select-and-goto): Use `read-from-minibuffer' to read
 	  key instead of 'read-char-exclusive' so that emacs can receive
-	  any commands in the other frames.  Also avoid to try delete
+	  any commands in the other frames.  Also avoid trying delete
 	  window for minibuffer when it is active.
 
 	From Hideyuki SHIRAI <shirai@meadowy.org>:

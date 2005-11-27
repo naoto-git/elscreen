@@ -246,9 +246,6 @@ starts up, and opens files with new screen if needed."
   (global-set-key prefix-key elscreen-map)
   (define-key minibuffer-local-map prefix-key 'undefined)
   (setq elscreen-prefix-key prefix-key))
-(let ((prefix-key elscreen-prefix-key)
-      (elscreen-prefix-key nil))
-  (elscreen-set-prefix-key prefix-key))
 
 (defvar elscreen-help "ElScreen keys:
   \\[elscreen-create]    Create a new screen and switch to it
@@ -338,7 +335,10 @@ starts up, and opens files with new screen if needed."
   (mapcar
    (lambda (frame)
      (elscreen-make-frame-confs frame 'keep))
-   (frame-list)))
+   (frame-list))
+  (let ((prefix-key elscreen-prefix-key)
+	(elscreen-prefix-key nil))
+    (elscreen-set-prefix-key prefix-key)))
 
 (static-cond
  ((boundp 'after-make-frame-functions) ; GNU Emacs 21
@@ -931,16 +931,14 @@ is ommitted, current-screen will survive."
 	    (lambda (window)
 	      (set-buffer (window-buffer window))
 	      (setq nickname-list
-		    (cons
-		     (or
-		      (elscreen-get-alist-to-nickname
-		       elscreen-mode-to-nickname-alist-internal
-		       string-match (symbol-name major-mode))
-		      (elscreen-get-alist-to-nickname
-		       elscreen-buffer-to-nickname-alist-internal
-		       string-match (buffer-name))
-		      (cons 'buffer-name (buffer-name)))
-		     nickname-list)))
+		    (cons (or (elscreen-get-alist-to-nickname
+			       elscreen-mode-to-nickname-alist-internal
+			       string-match (symbol-name major-mode))
+			      (elscreen-get-alist-to-nickname
+			       elscreen-buffer-to-nickname-alist-internal
+			       string-match (buffer-name))
+			      (cons 'buffer-name (buffer-name)))
+			  nickname-list)))
 	    'other 'other)
 
 	   (setq screen-name (cdr (car nickname-list)))
@@ -1106,30 +1104,29 @@ is ommitted, current-screen will survive."
   (defun elscreen-e21-tab-update (&optional force)
     (when (and (not (window-minibuffer-p))
 	       (or (elscreen-screen-modified-p 'elscreen-tab-update) force))
-      (let ((screen-list (sort (elscreen-get-screen-list) '<))
-	    (screen-to-name-alist (elscreen-get-screen-to-name-alist
-				   elscreen-tab-width t))
-	    (current-screen (elscreen-get-current-screen))
-	    (previous-screen (elscreen-get-previous-screen))
-	    (tab-separator (propertize
-			    " "
-			    'face 'elscreen-tab-background-face
-			    'display '(space :width 0.5)))
-	    (window-with-tab (frame-first-window)))
-	(walk-windows
-	 (lambda (window)
-	   (with-current-buffer (window-buffer window)
-	     (when (and (boundp 'elscreen-e21-tab-format)
-			(equal header-line-format elscreen-e21-tab-format)
-			(or (not (eq (window-buffer window)
-				     (window-buffer window-with-tab)))
-			    (not elscreen-display-tab)))
-	       (kill-local-variable 'elscreen-e21-tab-format)
-	       (setq header-line-format nil))))
-	   'other 'other)
+      (walk-windows
+       (lambda (window)
+	 (with-current-buffer (window-buffer window)
+	   (when (and (boundp 'elscreen-e21-tab-format)
+		      (equal header-line-format elscreen-e21-tab-format)
+		      (or (not (eq (window-buffer window)
+				   (window-buffer (frame-first-window))))
+			  (not elscreen-display-tab)))
+	     (kill-local-variable 'elscreen-e21-tab-format)
+	     (setq header-line-format nil))))
+       'other 'other)
 
-	(when elscreen-display-tab
-	  (with-current-buffer (window-buffer window-with-tab)
+      (when elscreen-display-tab
+	(let ((screen-list (sort (elscreen-get-screen-list) '<))
+	      (screen-to-name-alist (elscreen-get-screen-to-name-alist
+				     elscreen-tab-width t))
+	      (current-screen (elscreen-get-current-screen))
+	      (previous-screen (elscreen-get-previous-screen))
+	      (tab-separator (propertize
+			      " "
+			      'face 'elscreen-tab-background-face
+			      'display '(space :width 0.5))))
+	  (with-current-buffer (window-buffer (frame-first-window))
 	    (kill-local-variable 'elscreen-e21-tab-format)
 	    (when elscreen-tab-display-create-screen
 	      (setq elscreen-e21-tab-format
