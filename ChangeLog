@@ -12,6 +12,11 @@
 	* elscreen-xmas-menu-bar-command-entries: this, properly.
 	* (elscreen-e21-tab-update): Avoid unnecessary call of
 	  elscreen-get-screen-name-to-alist.
+	* (elscreen-run-screen-update-hook): Don't use post-command-hook
+	  to check whether menubar and tab are required to be updated.  It
+	  is expected that this change improve feeling speed of each
+	  command, especially functions to move cursor such as
+	  forward-char.
 
 
 2005-11-26  Naoto Morishima  <naoto@morishima.net>

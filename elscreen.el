@@ -406,10 +406,8 @@ starts up, and opens files with new screen if needed."
 (defvar elscreen-screen-update-hook nil)
 (defun elscreen-run-screen-update-hook ()
   (elscreen-notify-screen-modification-suppress
-   (run-hooks 'elscreen-screen-update-hook)))
-(add-hook 'pre-command-hook
-          (lambda ()
-	    (add-hook 'post-command-hook 'elscreen-run-screen-update-hook)))
+   (run-hooks 'elscreen-screen-update-hook))
+  (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (defun elscreen-screen-modified-p (inquirer &optional frame)
   (let* ((frame (or frame (selected-frame)))
@@ -421,7 +419,8 @@ starts up, and opens files with new screen if needed."
 
 (defun elscreen-set-screen-modified (&optional frame)
   (let ((frame (or frame (selected-frame))))
-    (elscreen-set-status 'modified-inquirer nil frame)))
+    (elscreen-set-status 'modified-inquirer nil frame))
+  (add-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (cond
  ((fboundp 'compare-window-configurations)) ; GNU Emacs
@@ -468,8 +467,8 @@ starts up, and opens files with new screen if needed."
 
 (elscreen-screen-modified-hook-setup
  (recenter 'force) (change-major-mode-hook 'force)
+ select-window
  window-configuration-change-hook window-size-change-functions
- (pre-command-hook 'force)
  (handle-switch-frame 'force) ; GNU Emacs 21
  (select-frame-hook 'force) ; XEmacs
  )
