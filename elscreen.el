@@ -597,8 +597,8 @@ If FRAME is omitted, selected-frame is used."
        (elscreen-save-screen-excursion
 	(mapcar
 	 (lambda (screen)
-	   (if (funcall condition screen)
-	       (throw 'find-screen screen)))
+	   (when (funcall condition screen)
+	     (throw 'find-screen screen)))
 	 screen-list)
 	nil)))))
 
@@ -614,7 +614,7 @@ If FRAME is omitted, selected-frame is used."
     (when (and (null target-screen) create)
       (cond
        ((null buffer))
-       ((setq target-screen (elscreen-create-internal t))
+       ((setq target-screen (elscreen-create-internal 'noerror))
 	(save-window-excursion
 	  (elscreen-goto-internal target-screen)
 	  (switch-to-buffer buffer t)
@@ -646,8 +646,8 @@ If FRAME is omitted, selected-frame is used."
 	     (mapcar
 	      (lambda (window)
 		(select-window window)
-		(if (string-match major-mode-re (symbol-name major-mode))
-		    (throw 'find t)))
+		(when (string-match major-mode-re (symbol-name major-mode))
+		  (throw 'find t)))
 	      (window-list))
 	     nil)))))))
 
@@ -1010,7 +1010,7 @@ is ommitted, current-screen will survive."
   (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
     (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer)
 
-  (defvar elscreen-menu-bar-command-entries
+  (defvar elscreen-e21-menu-bar-command-entries
     (list (list 'elscreen-command-separator
 		'menu-item
 		"--")
@@ -1072,7 +1072,7 @@ is ommitted, current-screen will survive."
 				       screen))))
 	       screen-list))
 	(setq elscreen-menu
-	      (nconc elscreen-menu elscreen-menu-bar-command-entries))
+	      (nconc elscreen-menu elscreen-e21-menu-bar-command-entries))
 	(setq elscreen-menu
 	      (cons 'keymap (cons "Select Screen" elscreen-menu)))
 	(define-key (current-global-map) [menu-bar elscreen]
@@ -1213,7 +1213,7 @@ is ommitted, current-screen will survive."
         (setcdr mode-line (cons elscreen-mode-line-elm (cdr mode-line)))))
 
   ;; Menu
-  (defvar elscreen-menu-bar-command-entries
+  (defvar elscreen-xmas-menu-bar-command-entries
     '("%_ElScreen"
       :filter elscreen-xmas-menu-bar-filter
       "----"
@@ -1231,7 +1231,8 @@ is ommitted, current-screen will survive."
 	(when (equal (car (car menubar)) "%_Buffers")
 	  (throw 'buffers-menu-search menubar))
 	(setq menubar (cdr menubar))))
-    (setcdr menubar (cons elscreen-menu-bar-command-entries (cdr menubar))))
+    (setcdr menubar
+	    (cons elscreen-xmas-menu-bar-command-entries (cdr menubar))))
 
   (set-menubar elscreen-menubar)
   (set-menubar-dirty-flag)
@@ -1449,7 +1450,7 @@ Use \\[toggle-read-only] to permit editing."
                                (format "%d M-x " (car prefix-arg)))
                               (t
                                "M-x "))))
-    (if (setq target-screen (elscreen-create-internal t))
+    (if (setq target-screen (elscreen-create-internal 'noerror))
 	(elscreen-goto target-screen)
       (select-window (split-window)))
     (command-execute this-command t)))

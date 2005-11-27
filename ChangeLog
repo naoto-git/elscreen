@@ -4,6 +4,13 @@
 	* (elscreen-command-line-funcall): New function.  Now emacs
 	  accepts `-e' or `--elscreen-funcall' option with 1 argument in
 	  command line.
+	* (elscreen-find-screen-by-buffer): Call elscreen-create-internal
+	  with arg 'noerror instead of t, for readability.
+	* (elscreen-execute-extended-command): Ditto.
+	* elscreen-menu-bar-command-entries: Renamed to...
+	* elscreen-e21-menu-bar-command-entries: this, or...
+	* elscreen-xmas-menu-bar-command-entries: this, properly.
+
 
 2005-11-26  Naoto Morishima  <naoto@morishima.net>
 
