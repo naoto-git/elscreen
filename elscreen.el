@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1 (November 21, 2005)")
+(defconst elscreen-version "1.4.1.1 (November 21, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -192,9 +192,9 @@ starts up, and opens files with new screen if needed."
   "*Keymap for ElScreen.")
 (define-key elscreen-map "\C-c" 'elscreen-create)
 (define-key elscreen-map "c"    'elscreen-create)
+(define-key elscreen-map "C"    'elscreen-clone)
 (define-key elscreen-map "\C-k" 'elscreen-kill)
 (define-key elscreen-map "k"    'elscreen-kill)
-(define-key elscreen-map "\C-K" 'elscreen-kill-others)
 (define-key elscreen-map "K"    'elscreen-kill-others)
 (define-key elscreen-map "\C-p" 'elscreen-previous)
 (define-key elscreen-map "p"    'elscreen-previous)
@@ -333,7 +333,7 @@ starts up, and opens files with new screen if needed."
     (select-frame (previous-frame))
     (elscreen-notify-screen-modification 'force-immediately)))
 
-(defun elscreen-bootstrap ()
+(defun elscreen-start ()
   (mapcar
    (lambda (frame)
      (elscreen-make-frame-confs frame 'keep))
@@ -674,6 +674,24 @@ Default value for SEC is 3."
   (let ((screen (elscreen-create-internal)))
     (if screen
 	(elscreen-goto screen))))
+
+(defun elscreen-clone (&optional target-screen)
+  "Ceate a new screen with the window-configuration of TARGET-SCREEN.
+If TARGET-SCREEN is ommitted, current-screen is used."
+  (interactive)
+  (let ((target-screen (or target-screen (elscreen-get-current-screen)))
+	(screen (elscreen-create-internal))
+	elscreen-window-configuration)
+    (when screen
+      (elscreen-set-window-configuration
+       (elscreen-get-current-screen)
+       (elscreen-current-window-configuration))
+      (save-window-excursion
+	(elscreen-goto-internal target-screen)
+	(setq elscreen-window-configuration
+	      (elscreen-current-window-configuration)))
+      (elscreen-set-window-configuration screen elscreen-window-configuration)
+      (elscreen-goto screen))))
 
 (defvar elscreen-kill-hook nil)
 (defun elscreen-kill (&optional screen)
@@ -1529,4 +1547,4 @@ Use \\[toggle-read-only] to permit editing."
 
 ;;; Start ElScreen!
 
-(elscreen-bootstrap)
+(elscreen-start)

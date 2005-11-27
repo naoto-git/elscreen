@@ -1,3 +1,10 @@
+2005-11-26  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-clone): New function.
+	* (elscreen-bootstrap): Renamed to...
+	* (elscreen-start): this.
+
+
 2005-11-22  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.4.1 released.
