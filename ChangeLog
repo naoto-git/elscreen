@@ -1,7 +1,9 @@
 2005-11-27  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-kill-screen-and-buffers): New function.
-
+	* (elscreen-command-line-funcall): New function.  Now emacs
+	  accepts `-e' or `--elscreen-funcall' option with 1 argument in
+	  command line.
 
 2005-11-26  Naoto Morishima  <naoto@morishima.net>
 

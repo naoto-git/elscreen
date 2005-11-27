@@ -1456,6 +1456,26 @@ Use \\[toggle-read-only] to permit editing."
 
 ;;; Command-line processing at startup time
 
+(defun elscreen-command-line-funcall (switch-string)
+  (let ((argval (intern (car command-line-args-left)))
+	screen elscreen-window-configuration)
+    (setq command-line-args-left (cdr command-line-args-left))
+    (save-window-excursion
+      (elscreen-apply-window-configuration
+       (elscreen-default-window-configuration))
+      (if (commandp argval)
+	  (command-execute argval)
+	(funcall argval))
+      (setq elscreen-window-configuration
+	    (elscreen-current-window-configuration)))
+    (setq file-count (1+ file-count))
+    (cond
+     ((= file-count 1)
+      (elscreen-apply-window-configuration elscreen-window-configuration))
+     ((setq screen (elscreen-create-internal 'noerror))
+      (elscreen-set-window-configuration screen
+					   elscreen-window-configuration)))))
+
 (defun elscreen-command-line-find-file (file file-count &optional line column)
   (let ((line (or line 0))
 	(column (or column 0)))
@@ -1463,22 +1483,24 @@ Use \\[toggle-read-only] to permit editing."
      ((= file-count 1)
       (find-file file))
      ((> file-count 10)
-      (elscreen-goto (mod (1- file-count) 10))
-      (elscreen-find-file file))
+      (find-file-noselect file))
      (t
-      (elscreen-find-file file)))
+      (elscreen-find-screen-by-buffer (find-file-noselect file) 'create)))
     (or (zerop line)
 	(goto-line line))
     (unless (< column 1)
-      (move-to-column (1- column)))
-    (elscreen-goto 0)
-    (elscreen-set-previous-screen nil)))
+      (move-to-column (1- column)))))
 
-(static-when elscreen-on-emacs
-  (when elscreen-startup-command-line-processing
+(when elscreen-startup-command-line-processing
+  (setq command-switch-alist
+	(append command-switch-alist
+		'(("-elscreen-funcall" . elscreen-command-line-funcall)
+		  ("-e"                . elscreen-command-line-funcall))))
+
+  (static-when elscreen-on-emacs
     (defun elscreen-e21-command-line ()
-      (if (string-match "\\`-" argi)
-	  (error "Unknown option `%s'" argi))
+      (when (string-match "\\`-" argi)
+	(error "Unknown option `%s'" argi))
       (setq file-count (1+ file-count))
       (setq inhibit-startup-buffer-menu t)
       (let* ((file
@@ -1486,16 +1508,15 @@ Use \\[toggle-read-only] to permit editing."
 	       (command-line-normalize-file-name orig-argi)
 	       dir)))
 	(elscreen-command-line-find-file file file-count line column))
-	(setq line 0)
-	(setq column 0)
+      (setq line 0)
+      (setq column 0)
       t)
 
     (add-hook 'after-init-hook (lambda ()
 				 (add-to-list 'command-line-functions
-					      'elscreen-e21-command-line t)))))
+					      'elscreen-e21-command-line t))))
 
-(static-when elscreen-on-xemacs
-  (when elscreen-startup-command-line-processing
+  (static-when elscreen-on-xemacs
     (defadvice command-line-1 (around elscreen-xmas-command-line-1 activate)
       (cond
        ((null command-line-args-left)
