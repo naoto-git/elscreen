@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.1 (November 21, 2005)")
+(defconst elscreen-version "1.4.1.2 (November 21, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -195,6 +195,7 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "C"    'elscreen-clone)
 (define-key elscreen-map "\C-k" 'elscreen-kill)
 (define-key elscreen-map "k"    'elscreen-kill)
+(define-key elscreen-map "\M-k" 'elscreen-kill-screen-and-buffers)
 (define-key elscreen-map "K"    'elscreen-kill-others)
 (define-key elscreen-map "\C-p" 'elscreen-previous)
 (define-key elscreen-map "p"    'elscreen-previous)
@@ -724,6 +725,20 @@ ommitted, current-screen is killed."
       (elscreen-notify-screen-modification 'force)
       (run-hooks 'elscreen-kill-hook)
       screen))))
+
+(defun elscreen-kill-screen-and-buffers (&optional screen)
+  (interactive)
+  (let* ((screen (or screen (elscreen-get-current-screen)))
+	 (elscreen-window-configuration
+	  (elscreen-get-window-configuration screen)))
+    (when (elscreen-kill screen)
+      (save-window-excursion
+	(elscreen-apply-window-configuration elscreen-window-configuration)
+	(mapc
+	 (lambda (buffer)
+	   (and (buffer-live-p buffer) (kill-buffer buffer)))
+	 (mapcar 'window-buffer (window-list))))
+      screen)))
 
 (defun elscreen-kill-others (&optional screen force)
   "Kill screens other than SCREEN.  If optional argument SCREEN
