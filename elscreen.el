@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.2 (November 21, 2005)")
+(defconst elscreen-version "1.4.1.3 (November 28, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 21, 2005
+;; Revised:  November 28, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -467,7 +467,7 @@ starts up, and opens files with new screen if needed."
 
 (elscreen-screen-modified-hook-setup
  (recenter 'force) (change-major-mode-hook 'force)
- select-window
+ other-window
  window-configuration-change-hook window-size-change-functions
  (handle-switch-frame 'force) ; GNU Emacs 21
  (select-frame-hook 'force) ; XEmacs
