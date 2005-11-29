@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.3 (November 28, 2005)")
+(defconst elscreen-version "1.4.1.5 (November 29, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 28, 2005
+;; Revised:  November 29, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -318,6 +318,7 @@ starts up, and opens files with new screen if needed."
 			(list (cons 'current-screen 0)
 			      (cons 'previous-screen nil)
 			      (cons 'modified-inquirer nil)))
+		  (cons 'screen-to-name-alist-cache nil)
 		  (cons 'window-configuration
 			(list (cons 0 elscreen-window-configuration)))
 		  (cons 'screen-nickname nil)))
@@ -397,11 +398,8 @@ starts up, and opens files with new screen if needed."
 
 (defvar elscreen-notify-screen-modification-suppress-flag nil)
 (defmacro elscreen-notify-screen-modification-suppress (&rest body)
-  (` (let (body-result)
-       (setq elscreen-notify-screen-modification-suppress-flag t)
-       (setq body-result (,@ body))
-       (setq elscreen-notify-screen-modification-suppress-flag nil)
-       body-result)))
+  (` (let ((elscreen-notify-screen-modification-suppress-flag t))
+       (,@ body))))
 
 (defvar elscreen-screen-update-hook nil)
 (defun elscreen-run-screen-update-hook ()
@@ -473,6 +471,14 @@ starts up, and opens files with new screen if needed."
  (select-frame-hook 'force) ; XEmacs
  )
 
+(defun elscreen-get-screen-to-name-alist-cache (&optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-get-conf-list frame 'screen-to-name-alist-cache)))
+
+(defun elscreen-set-screen-to-name-alist-cache (alist &optional frame)
+  (let ((frame (or frame (selected-frame))))
+    (elscreen-set-conf-list frame 'screen-to-name-alist-cache alist)))
+
 (defun elscreen-get-window-configuration (screen &optional frame)
   (let* ((frame (or frame (selected-frame)))
 	 (winconf-list (elscreen-get-conf-list frame 'window-configuration)))
@@ -532,11 +538,16 @@ If FRAME is omitted, selected-frame is used."
     (not (null (elscreen-get-window-configuration screen frame)))))
 
 (defun elscreen-copy-tree (tree)
-  (when (consp tree)
-    (let ((original-tree tree))
-      (setq tree (list (elscreen-copy-tree (car original-tree))))
-      (nconc tree (elscreen-copy-tree (cdr original-tree)))))
-  tree)
+  (if (fboundp 'copy-tree)
+      (copy-tree tree)
+    (let (clone)
+      (while (consp tree)
+	(setq clone (cons (or (and (consp (car tree))
+				   (elscreen-copy-tree (car tree)))
+			      (car tree))
+			  clone))
+	(setq tree (cdr tree)))
+      (nconc (nreverse clone) tree))))
 
 (defmacro elscreen-save-screen-excursion (&rest body)
   (` (let ((original-buffer-list (buffer-list))
@@ -911,66 +922,71 @@ is ommitted, current-screen will survive."
 	 nil))))
 
 (defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
-  (elscreen-set-window-configuration (elscreen-get-current-screen)
-				     (elscreen-current-window-configuration))
   (elscreen-notify-screen-modification-suppress
-   (let* ((screen-list (sort (elscreen-get-screen-list) '<))
-	  (screen-name nil)
-	  (screen-to-name-alist nil)
-	  (nickname-list nil))
-     (elscreen-save-screen-excursion
-      (mapcar
-       (lambda (screen)
-	 (elscreen-goto-internal screen)
-         ;; If nickname exists, use it.
-	 (setq screen-name (elscreen-get-screen-nickname screen))
-         ;; Nickname does not exist, so examine major-mode and buffer-name.
-	 (when (null screen-name)
-	   (walk-windows
-	    (lambda (window)
-	      (set-buffer (window-buffer window))
-	      (setq nickname-list
-		    (cons (or (elscreen-get-alist-to-nickname
-			       elscreen-mode-to-nickname-alist-internal
-			       string-match (symbol-name major-mode))
-			      (elscreen-get-alist-to-nickname
-			       elscreen-buffer-to-nickname-alist-internal
-			       string-match (buffer-name))
-			      (cons 'buffer-name (buffer-name)))
-			  nickname-list)))
-	    'other 'other)
+   (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
+     (elscreen-set-window-configuration (elscreen-get-current-screen)
+					(elscreen-current-window-configuration))
+     (let* ((screen-list (sort (elscreen-get-screen-list) '<))
+	    screen-name screen-to-name-alist nickname-list)
+       (elscreen-save-screen-excursion
+	(mapcar
+	 (lambda (screen)
+	   (elscreen-goto-internal screen)
+	   ;; If nickname exists, use it.
+	   (setq screen-name (elscreen-get-screen-nickname screen))
+	   ;; Nickname does not exist, so examine major-mode and buffer-name.
+	   (when (null screen-name)
+	     (walk-windows
+	      (lambda (window)
+		(set-buffer (window-buffer window))
+		(setq nickname-list
+		      (cons (or (elscreen-get-alist-to-nickname
+				 elscreen-mode-to-nickname-alist-internal
+				 string-match (symbol-name major-mode))
+				(elscreen-get-alist-to-nickname
+				 elscreen-buffer-to-nickname-alist-internal
+				 string-match (buffer-name))
+				(cons 'buffer-name (buffer-name)))
+			    nickname-list)))
+	      'other 'other)
 
-	   (setq screen-name (cdr (car nickname-list)))
-	   (if (eq (car (car nickname-list)) 'nickname)
-	       (setq nickname-list
-		     (delete (car nickname-list) nickname-list))
-	     (setq nickname-list (cdr nickname-list)))
-	   (while (> (length nickname-list) 0)
-	     (setq screen-name
-		   (concat screen-name ":" (cdr (car nickname-list))))
+	     (setq screen-name (cdr (car nickname-list)))
 	     (if (eq (car (car nickname-list)) 'nickname)
 		 (setq nickname-list
 		       (delete (car nickname-list) nickname-list))
-	       (setq nickname-list (cdr nickname-list)))))
+	       (setq nickname-list (cdr nickname-list)))
+	     (while (> (length nickname-list) 0)
+	       (setq screen-name
+		     (concat screen-name ":" (cdr (car nickname-list))))
+	       (if (eq (car (car nickname-list)) 'nickname)
+		   (setq nickname-list
+			 (delete (car nickname-list) nickname-list))
+		 (setq nickname-list (cdr nickname-list)))))
 
-	 (if (and (integerp truncate-length)
-		  (> truncate-length 3)
-		  (> (string-width screen-name) truncate-length))
-	     (setq screen-name
-		   (truncate-string-to-width
-		    (concat (truncate-string-to-width screen-name
-						      (- truncate-length 3))
-			    "...")
-		    truncate-length nil ?.))
-	   (when padding
-	     (setq screen-name
-		   (truncate-string-to-width screen-name
-					     truncate-length nil ?\ ))))
+	   (set-alist 'screen-to-name-alist screen screen-name))
+	 screen-list))
 
-	 (set-alist 'screen-to-name-alist screen screen-name))
-       screen-list))
+       (elscreen-set-screen-to-name-alist-cache screen-to-name-alist)))
 
-    screen-to-name-alist)))
+   (let ((screen-to-name-alist
+	  (copy-alist (elscreen-get-screen-to-name-alist-cache))))
+     (mapc
+      (lambda (screen-to-name)
+	(let ((screen-name (cdr screen-to-name)))
+	  (if (and (integerp truncate-length)
+		   (> truncate-length 3)
+		   (> (string-width screen-name) truncate-length))
+	      (setq screen-name
+		    (truncate-string-to-width
+		     (concat (truncate-string-to-width
+			      screen-name (- truncate-length 3))
+			     "...")
+		     truncate-length nil ?.))
+	    (when padding
+	      (setq screen-name (truncate-string-to-width
+				 screen-name truncate-length nil ?\ ))))
+	  (setcdr screen-to-name screen-name)))
+      screen-to-name-alist))))
 
 (defun elscreen-display-screen-name-list ()
   "Display the list of screens in mini-buffer."
@@ -1045,8 +1061,7 @@ is ommitted, current-screen will survive."
   (defun elscreen-e21-menu-bar-update (&optional force)
     (when (and (lookup-key (current-global-map) [menu-bar elscreen])
 	       (or force
-		   (and (elscreen-screen-modified-p
-			 'elscreen-menu-bar-update))))
+		   (elscreen-screen-modified-p 'elscreen-menu-bar-update)))
       (let ((screen-list (sort (elscreen-get-screen-list) '<))
 	    (screen-to-name-alist (elscreen-get-screen-to-name-alist 25))
 	    (elscreen-menu nil)

@@ -1,3 +1,20 @@
+2005-11-29  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-notify-screen-modification-suppress): Restore original
+	  flag when exiting from this macro.
+	* (elscreen-make-frame-confs): Add 'screen-to-name-alist-cache to
+	  store cache of screen-to-name-alist.
+	* (elscreen-get-screen-to-name-alist-cache): New function.
+	* (elscreen-set-screen-to-name-alist-cache): Ditto.
+	* (elscreen-get-screen-to-name-alist): Use cache of
+	  screen-name-to-alist instead of generating it when
+	  screen-modified-p is nil.
+
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* (elscreen-copy-tree): Fully rewritten, and use copy-tree if
+	  available.
+
+
 2005-11-27  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-kill-screen-and-buffers): New function.
@@ -10,13 +27,15 @@
 	* elscreen-menu-bar-command-entries: Renamed to...
 	* elscreen-e21-menu-bar-command-entries: this, or...
 	* elscreen-xmas-menu-bar-command-entries: this, properly.
-	* (elscreen-e21-tab-update): Avoid unnecessary call of
-	  elscreen-get-screen-name-to-alist.
 	* (elscreen-run-screen-update-hook): Don't use post-command-hook
 	  to check whether menubar and tab are required to be updated.  It
 	  is expected that this change improve feeling speed of each
 	  command, especially functions to move cursor such as
 	  forward-char.
+
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* (elscreen-e21-tab-update): Avoid unnecessary call of
+	  elscreen-get-screen-name-to-alist.
 
 
 2005-11-26  Naoto Morishima  <naoto@morishima.net>
