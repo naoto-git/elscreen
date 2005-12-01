@@ -1,5 +1,12 @@
-2005-11-29  Naoto Morishima  <naoto@morishima.net>
+2005-12-01  Naoto Morishima  <naoto@morishima.net>
 
+	From Hideyuki SHIRAI <shirai@meadowy.org>:
+	* (elscreen-execute-extended-command): Use completing-read instead
+	  of read-command to ensure that the extended-command-history is
+	  in operation on FSF Emacs.
+
+
+2005-11-29  Naoto Morishima  <naoto@morishima.net>
 	* (elscreen-notify-screen-modification-suppress): Restore original
 	  flag when exiting from this macro.
 	* (elscreen-make-frame-confs): Add 'screen-to-name-alist-cache to

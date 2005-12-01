@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.5 (November 29, 2005)")
+(defconst elscreen-version "1.4.1.6 (December 01, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 29, 2005
+;; Revised:  December 01, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -783,10 +783,8 @@ is ommitted, current-screen will survive."
   (cond
    ((eq (elscreen-get-current-screen) screen))
    ((elscreen-screen-live-p screen)
-    (if (elscreen-get-current-screen)
-	(elscreen-set-window-configuration
-	 (elscreen-get-current-screen)
-	 (elscreen-current-window-configuration)))
+    (elscreen-set-window-configuration (elscreen-get-current-screen)
+				       (elscreen-current-window-configuration))
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
@@ -1442,25 +1440,29 @@ Use \\[toggle-read-only] to permit editing."
   (interactive "P")
   (let ((prefix-arg prefix-arg)
 	target-screen)
-    (setq this-command (read-command
-                        ;; Note: this has the hard-wired
-                        ;;  "C-u" and "M-x" string bug in common
-                        ;;  with all Emacs's.
-                        ;; (i.e. it prints C-u and M-x regardless of
-                        ;; whether some other keys were actually bound
-                        ;; to `execute-extended-command' and
-                        ;; `universal-argument'.
-                        (cond ((eq prefix-arg '-)
-                               "- M-x ")
-                              ((equal prefix-arg '(4))
-                               "C-u M-x ")
-                              ((integerp prefix-arg)
-                               (format "%d M-x " prefix-arg))
-                              ((and (consp prefix-arg)
-                                    (integerp (car prefix-arg)))
-                               (format "%d M-x " (car prefix-arg)))
-                              (t
-                               "M-x "))))
+    (setq this-command (intern (completing-read
+				;; Note: this has the hard-wired
+				;;  "C-u" and "M-x" string bug in common
+				;;  with all Emacs's.
+				;; (i.e. it prints C-u and M-x regardless of
+				;; whether some other keys were actually bound
+				;; to `execute-extended-command' and
+				;; `universal-argument'.
+				(cond ((eq prefix-arg '-)
+				       "- M-x ")
+				      ((equal prefix-arg '(4))
+				       "C-u M-x ")
+				      ((integerp prefix-arg)
+				       (format "%d M-x " prefix-arg))
+				      ((and (consp prefix-arg)
+					    (integerp (car prefix-arg)))
+				       (format "%d M-x " (car prefix-arg)))
+				      (t
+				       "M-x "))
+				obarray 'commandp t nil
+				(static-if elscreen-on-xemacs
+				    'read-command-history
+				  'extended-command-history))))
     (if (setq target-screen (elscreen-create-internal 'noerror))
 	(elscreen-goto target-screen)
       (select-window (split-window)))
