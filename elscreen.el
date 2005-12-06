@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.6 (December 01, 2005)")
+(defconst elscreen-version "1.4.1.7 (December 02, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 01, 2005
+;; Revised:  December 02, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -530,10 +530,14 @@ If FRAME is omitted, selected-frame is used."
     (= (elscreen-get-number-of-screens frame) 1)))
 
 (defun elscreen-get-screen-list (&optional frame)
+  "Return a list of screen numbers.
+If FRAME is omitted, selected-frame is used."
   (let ((frame (or frame (selected-frame))))
     (mapcar 'car (elscreen-get-conf-list frame 'window-configuration))))
 
 (defun elscreen-screen-live-p (screen &optional frame)
+  "Return t when SCREEN on FRAME is alive.
+If FRAME is omitted, selected-frame is used."
   (let* ((frame (or frame (selected-frame))))
     (not (null (elscreen-get-window-configuration screen frame)))))
 
@@ -552,12 +556,15 @@ If FRAME is omitted, selected-frame is used."
 (defmacro elscreen-save-screen-excursion (&rest body)
   (` (let ((original-buffer-list (buffer-list))
 	   (original-buffer-live-p nil)
+	   (original-elscreen-window-configuration
+	    (elscreen-current-window-configuration))
 	   (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
        (unwind-protect
-	   (save-excursion
+	   (save-window-excursion
 	     (,@ body))
 	 (setq elscreen-frame-confs original-frame-confs)
-	 (elscreen-goto-internal (elscreen-get-current-screen))
+	 (elscreen-apply-window-configuration
+	  original-elscreen-window-configuration)
 	 (static-when elscreen-on-xemacs
 	   (elscreen-screen-number-string-update))
 	 (mapcar
@@ -580,7 +587,8 @@ If FRAME is omitted, selected-frame is used."
   "Create a new screen."
   (cond
    ((>= (elscreen-get-number-of-screens) 10)
-    (if (not noerror) (elscreen-message "Can't create any more screen"))
+    (unless noerror
+      (elscreen-message "No more screens."))
     nil)
    (t
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
@@ -694,9 +702,6 @@ If TARGET-SCREEN is ommitted, current-screen is used."
 	(screen (elscreen-create-internal))
 	elscreen-window-configuration)
     (when screen
-      (elscreen-set-window-configuration
-       (elscreen-get-current-screen)
-       (elscreen-current-window-configuration))
       (save-window-excursion
 	(elscreen-goto-internal target-screen)
 	(setq elscreen-window-configuration
@@ -737,6 +742,8 @@ ommitted, current-screen is killed."
       screen))))
 
 (defun elscreen-kill-screen-and-buffers (&optional screen)
+  "Kill buffers on SCREEN and SCREEN itself.  If optional
+argument SCREEN is omitted, current screen is killed."
   (interactive)
   (let* ((screen (or screen (elscreen-get-current-screen)))
 	 (elscreen-window-configuration
@@ -752,7 +759,7 @@ ommitted, current-screen is killed."
 
 (defun elscreen-kill-others (&optional screen force)
   "Kill screens other than SCREEN.  If optional argument SCREEN
-is ommitted, current-screen will survive."
+is ommitted, current screen will survive."
   (interactive)
   (let* ((screen (or screen (elscreen-get-current-screen)))
 	 (screen-list (delq screen (sort (elscreen-get-screen-list) '<)))
@@ -783,8 +790,10 @@ is ommitted, current-screen will survive."
   (cond
    ((eq (elscreen-get-current-screen) screen))
    ((elscreen-screen-live-p screen)
-    (elscreen-set-window-configuration (elscreen-get-current-screen)
-				       (elscreen-current-window-configuration))
+    (when (elscreen-get-current-screen)
+      (elscreen-set-window-configuration
+       (elscreen-get-current-screen)
+       (elscreen-current-window-configuration)))
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
