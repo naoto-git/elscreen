@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.7 (December 02, 2005)")
+(defconst elscreen-version "1.4.1.8 (December 08, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 02, 2005
+;; Revised:  December 08, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -214,8 +214,6 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "7"    'elscreen-jump)
 (define-key elscreen-map "8"    'elscreen-jump)
 (define-key elscreen-map "9"    'elscreen-jump-9)
-(define-key elscreen-map "?"    'elscreen-help)
-(define-key elscreen-map "b"    'elscreen-find-and-goto-by-buffer)
 (define-key elscreen-map "\C-s" 'elscreen-swap)
 (define-key elscreen-map "\C-w" 'elscreen-display-screen-name-list)
 (define-key elscreen-map "w"    'elscreen-display-screen-name-list)
@@ -223,13 +221,16 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "m"    'elscreen-display-last-message)
 (define-key elscreen-map "t"    'elscreen-display-time)
 (define-key elscreen-map "A"    'elscreen-screen-nickname)
-(define-key elscreen-map "v"    'elscreen-display-version)
-(define-key elscreen-map "i"    'elscreen-display-screen-number-toggle)
-(define-key elscreen-map "j"    'elscreen-link)
-(define-key elscreen-map "s"    'elscreen-split)
+(define-key elscreen-map "b"    'elscreen-find-and-goto-by-buffer)
 (define-key elscreen-map "\C-f" 'elscreen-find-file)
 (define-key elscreen-map "\C-r" 'elscreen-find-file-read-only)
+(define-key elscreen-map "d"    'elscreen-dired)
 (define-key elscreen-map "\M-x" 'elscreen-execute-extended-command)
+(define-key elscreen-map "i"    'elscreen-display-screen-number-toggle)
+(define-key elscreen-map "?"    'elscreen-help)
+(define-key elscreen-map "v"    'elscreen-display-version)
+(define-key elscreen-map "j"    'elscreen-link)
+(define-key elscreen-map "s"    'elscreen-split)
 
 (defun elscreen-set-prefix-key (prefix-key)
   (when (not (eq elscreen-prefix-key prefix-key))
@@ -250,6 +251,7 @@ starts up, and opens files with new screen if needed."
 (defvar elscreen-help "ElScreen keys:
   \\[elscreen-create]    Create a new screen and switch to it
   \\[elscreen-kill]    Kill the current screen
+  \\[elscreen-kill-screen-and-buffers]  Kill the current screen and buffers
   \\[elscreen-kill-others]    Kill other screens
   \\[elscreen-next]    Switch to the \"next\" screen in a cyclic order
   \\[elscreen-previous]    Switch to the \"previous\" screen in a cyclic order
@@ -258,12 +260,15 @@ starts up, and opens files with new screen if needed."
   \\[elscreen-jump-0]
     :      Jump to the screen #
   \\[elscreen-jump-9]
+  \\[elscreen-swap]  Swap current screen with previous one
   \\[elscreen-display-screen-name-list]    Show list of screens
   \\[elscreen-screen-nickname]    Name the current screen
   \\[elscreen-display-last-message]    Show last message
   \\[elscreen-display-time]    Show time
+  \\[elscreen-find-and-goto-by-buffer]    Switch to the screen in which specified screen is displayed
   \\[elscreen-find-file]  Create new screen and open file
   \\[elscreen-find-file-read-only]  Create new screen and open file but don't allow changes
+  \\[elscreen-dired]    Create new screen and run dired
   \\[elscreen-execute-extended-command]  Read function name, then call it with new screen
   \\[elscreen-display-screen-number-toggle]    Show/hide the screen number in the mode line
   \\[elscreen-display-version]    Show ElScreen version
@@ -1444,6 +1449,12 @@ Use \\[toggle-read-only] to permit editing."
   (interactive "FFind file read-only in new screen: ")
   (elscreen-find-file filename)
   (toggle-read-only 1))
+
+(defun elscreen-dired (dirname &optional switches)
+  (interactive (progn
+		 (or (featurep 'dired) (require 'dired))
+		 (dired-read-dir-and-switches "")))
+  (elscreen-find-and-goto-by-buffer (dired-noselect dirname switches) 'create))
 
 (defun elscreen-execute-extended-command (prefix-arg)
   (interactive "P")
