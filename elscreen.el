@@ -250,6 +250,7 @@ starts up, and opens files with new screen if needed."
 
 (defvar elscreen-help "ElScreen keys:
   \\[elscreen-create]    Create a new screen and switch to it
+  \\[elscreen-clone]    Create a new screen with the window-configuration of current screen
   \\[elscreen-kill]    Kill the current screen
   \\[elscreen-kill-screen-and-buffers]  Kill the current screen and buffers
   \\[elscreen-kill-others]    Kill other screens
@@ -700,7 +701,7 @@ Default value for SEC is 3."
 	(elscreen-goto screen))))
 
 (defun elscreen-clone (&optional target-screen)
-  "Ceate a new screen with the window-configuration of TARGET-SCREEN.
+  "Create a new screen with the window-configuration of TARGET-SCREEN.
 If TARGET-SCREEN is ommitted, current-screen is used."
   (interactive)
   (let ((target-screen (or target-screen (elscreen-get-current-screen)))
