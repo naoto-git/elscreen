@@ -1,6 +1,6 @@
-ElScreen 1.4.1 README file
+ElScreen 1.4.2 README file
 
-This is the distribution of ElScreen 1.4.1, released November 2005. 
+This is the distribution of ElScreen 1.4.2, released November 2005. 
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on 
 terminal.
@@ -18,8 +18,8 @@ Files
 -----
 This package should contain the following files:
 
-    elscreen.el     ElScreen version 1.4.1 main file
-    README          Introduction to ElScreen 1.4.1 (this file)
+    elscreen.el     ElScreen version 1.4.2 main file
+    README          Introduction to ElScreen 1.4.2 (this file)
     ChangeLog       ElScreen ChangeLog file
 
 
@@ -39,22 +39,30 @@ Usage
 -----
 You may use following sequences on ElScreen:
 
-    C-z         ElScreen prefix key
-    C-z C-c     Create new screen
-    C-z k       Kill the current screen
-    C-z K       Kill screens other than current one
-    C-z C-p     Switch to the previous screen
-    C-z C-n     Switch to the next screen
-    C-z C-a     Toggle screens
-    C-z g       Jump to the specified screen
-    C-z [0-9]   Jump to the screen #
-    C-z ?       Show help
-    C-z C-f     Find file in new screen
-    C-z w       Show list of screens
-    C-z m       Show last message
-    C-z t       Show time
-    C-z A       Name the current screen
-    C-z v       Show ElScreen version
+    C-z c    Create a new screen and switch to it
+    C-z k    Kill the current screen
+    C-z M-k  Kill the current screen and buffers
+    C-z K    Kill other screens
+    C-z n    Switch to the "next" screen in a cyclic order
+    C-z p    Switch to the "previous" screen in a cyclic order
+    C-z a    Toggle to the screen selected previously
+    C-z g    Jump to the specified screen
+    C-z 0
+      :      Jump to the screen #
+    C-z 9
+    C-z C-s  Swap current screen with previous one
+    C-z w    Show list of screens
+    C-z A    Name the current screen
+    C-z m    Show last message
+    C-z t    Show time
+    C-z b    Switch to the screen in which specified buffer is displayed
+    C-z C-f  Create new screen and open file
+    C-z C-r  Create new screen and open file but don't allow changes
+    C-z d    Create new screen and run dired
+    C-z M-x  Read function name, then call it with new screen
+    C-z i    Show/hide the screen number in the mode line
+    C-z v    Show ElScreen version
+    C-z ?    Show help
 
 
 Setup

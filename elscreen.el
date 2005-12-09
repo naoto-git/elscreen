@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.1.8 (December 08, 2005)")
+(defconst elscreen-version "1.4.2 (December 09, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 08, 2005
+;; Revised:  December 09, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -265,7 +265,7 @@ starts up, and opens files with new screen if needed."
   \\[elscreen-screen-nickname]    Name the current screen
   \\[elscreen-display-last-message]    Show last message
   \\[elscreen-display-time]    Show time
-  \\[elscreen-find-and-goto-by-buffer]    Switch to the screen in which specified screen is displayed
+  \\[elscreen-find-and-goto-by-buffer]    Switch to the screen in which specified buffer is displayed
   \\[elscreen-find-file]  Create new screen and open file
   \\[elscreen-find-file-read-only]  Create new screen and open file but don't allow changes
   \\[elscreen-dired]    Create new screen and run dired
