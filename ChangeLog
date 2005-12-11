@@ -1,3 +1,8 @@
+2005-12-12  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-make-frame-confs): Save current buffer.
+
+
 2005-12-09  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.4.2 released.

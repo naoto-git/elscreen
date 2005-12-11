@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.2 (December 09, 2005)")
+(defconst elscreen-version "1.4.2.1 (December 12, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 09, 2005
+;; Revised:  December 12, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -313,24 +313,25 @@ starts up, and opens files with new screen if needed."
   (when (null (elscreen-get-frame-confs frame))
     (let ((selected-frame (selected-frame))
 	  elscreen-window-configuration)
-      (select-frame frame)
-      (setq elscreen-window-configuration
-	    (if keep-window-configuration
-		(elscreen-current-window-configuration)
-	      (elscreen-default-window-configuration)))
-      (set-alist 'elscreen-frame-confs frame
-		 (list
-		  (cons 'status
-			(list (cons 'current-screen 0)
-			      (cons 'previous-screen nil)
-			      (cons 'modified-inquirer nil)))
-		  (cons 'screen-to-name-alist-cache nil)
-		  (cons 'window-configuration
-			(list (cons 0 elscreen-window-configuration)))
-		  (cons 'screen-nickname nil)))
-      (elscreen-apply-window-configuration elscreen-window-configuration)
-      (elscreen-notify-screen-modification 'force-immediately)
-      (select-frame selected-frame))))
+      (save-current-buffer
+	(select-frame frame)
+	(setq elscreen-window-configuration
+	      (if keep-window-configuration
+		  (elscreen-current-window-configuration)
+		(elscreen-default-window-configuration)))
+	(set-alist 'elscreen-frame-confs frame
+		   (list
+		    (cons 'status
+			  (list (cons 'current-screen 0)
+				(cons 'previous-screen nil)
+				(cons 'modified-inquirer nil)))
+		    (cons 'screen-to-name-alist-cache nil)
+		    (cons 'window-configuration
+			  (list (cons 0 elscreen-window-configuration)))
+		    (cons 'screen-nickname nil)))
+	(elscreen-apply-window-configuration elscreen-window-configuration)
+	(elscreen-notify-screen-modification 'force-immediately)
+	(select-frame selected-frame)))))
 
 (defun elscreen-delete-frame-confs (frame)
   (remove-alist 'elscreen-frame-confs frame)
