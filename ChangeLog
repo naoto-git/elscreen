@@ -1,6 +1,12 @@
 2005-12-13  Naoto Morishima  <naoto@morishima.net>
 
-	ElScreen 1.4.3 released.
+	* (elscreen-save-screen-excursion): Don't call
+	  elscreen-screen-number-string-update for XEmacs.
+	* (elscreen-goto): Ditto, and call redraw-frame in case of FSF
+	  Emacs and its major version equals 21.
+	* (elscreen-screen-number-string-update): Renamed to...
+	* (elscreen-xmas-mode-line-update): this, and now mode-line is
+	  updated by elscreen-run-screen-update-hook.
 
 
 2005-12-11  Naoto Morishima  <naoto@morishima.net>
@@ -8,6 +14,7 @@
 	* (elscreen-make-frame-confs): Save current buffer.
 	* (elscreen-e21-tab-update): Use (replace-regexp-in-string) so
 	  that screen-names do not lose its properties.
+
 
 2005-12-09  Naoto Morishima  <naoto@morishima.net>
 

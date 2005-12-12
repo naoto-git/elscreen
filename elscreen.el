@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3 (December 13, 2005)")
+(defconst elscreen-version "1.4.2.4 (December 13, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -571,8 +571,6 @@ If FRAME is omitted, selected-frame is used."
          (setq elscreen-frame-confs original-frame-confs)
          (elscreen-apply-window-configuration
           original-elscreen-window-configuration)
-         (static-when elscreen-on-xemacs
-           (elscreen-screen-number-string-update))
          (mapcar
           (lambda (buffer)
             (when (buffer-live-p buffer)
@@ -803,9 +801,8 @@ is ommitted, current screen will survive."
     (elscreen-set-previous-screen (elscreen-get-current-screen))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
-    (static-when elscreen-on-xemacs
-      (elscreen-screen-number-string-update))
-;;    (redraw-frame (selected-frame)) ; XXX?
+    (static-when (and elscreen-on-emacs (= emacs-major-version 21))
+      (redraw-frame (selected-frame)))
     (elscreen-notify-screen-modification 'force)
     (run-hooks 'elscreen-goto-hook)
     screen)
@@ -1227,15 +1224,20 @@ is ommitted, current screen will survive."
 (static-when elscreen-on-xemacs
   ;; Mode Line
   (defvar elscreen-screen-number-string " [0]")
-  (defun elscreen-screen-number-string-update ()
-    (setq elscreen-screen-number-string
-          (format " [%d]" (elscreen-get-current-screen))))
+  (defun elscreen-xmas-mode-line-update ()
+    (let (screen)
+      (when (and (elscreen-screen-modified-p 'elscreen-xmas-mode-line-update)
+                 (setq screen (elscreen-get-current-screen)))
+        (setq elscreen-screen-number-string (format " [%d]" screen))
+        (force-mode-line-update))))
 
   (let ((mode-line (memq 'global-mode-string mode-line-format))
         (elscreen-mode-line-elm
          '(elscreen-display-screen-number elscreen-screen-number-string)))
     (if (null (member elscreen-mode-line-elm mode-line))
         (setcdr mode-line (cons elscreen-mode-line-elm (cdr mode-line)))))
+
+  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-mode-line-update)
 
   ;; Menu
   (defvar elscreen-xmas-menu-bar-command-entries
@@ -1457,12 +1459,13 @@ Use \\[toggle-read-only] to permit editing."
 (defun elscreen-dired (dirname &optional switches)
   (interactive (progn
                  (or (featurep 'dired) (require 'dired))
-                 (dired-read-dir-and-switches "")))
+                 (dired-read-dir-and-switches "in new screen ")))
   (elscreen-find-and-goto-by-buffer (dired-noselect dirname switches) 'create))
 
 (defun elscreen-execute-extended-command (prefix-arg)
   (interactive "P")
   (let ((prefix-arg prefix-arg)
+        (prefix-key (key-description elscreen-prefix-key))
         target-screen)
     (setq this-command (intern (completing-read
                                 ;; Note: this has the hard-wired
@@ -1473,16 +1476,18 @@ Use \\[toggle-read-only] to permit editing."
                                 ;; to `execute-extended-command' and
                                 ;; `universal-argument'.
                                 (cond ((eq prefix-arg '-)
-                                       "- M-x ")
+                                       (format "- %s M-x " prefix-key))
                                       ((equal prefix-arg '(4))
-                                       "C-u M-x ")
+                                       (format "C-u %s M-x " prefix-key))
                                       ((integerp prefix-arg)
-                                       (format "%d M-x " prefix-arg))
+                                       (format "%d %s M-x "
+                                               prefix-arg prefix-key))
                                       ((and (consp prefix-arg)
                                             (integerp (car prefix-arg)))
-                                       (format "%d M-x " (car prefix-arg)))
+                                       (format "%d %s M-x "
+                                               (car prefix-arg) prefix-key))
                                       (t
-                                       "M-x "))
+                                       (format "%s M-x " prefix-key)))
                                 obarray 'commandp t nil
                                 (static-if elscreen-on-xemacs
                                     'read-command-history
