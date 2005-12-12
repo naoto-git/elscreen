@@ -3,7 +3,8 @@
 	* (elscreen-save-screen-excursion): Don't call
 	  elscreen-screen-number-string-update for XEmacs.
 	* (elscreen-goto): Ditto, and call redraw-frame in case of FSF
-	  Emacs and its major version equals 21.
+	  Emacs running on some window system and its major version equals
+	  21.
 	* (elscreen-screen-number-string-update): Renamed to...
 	* (elscreen-xmas-mode-line-update): this, and now mode-line is
 	  updated by elscreen-run-screen-update-hook.

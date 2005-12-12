@@ -802,7 +802,8 @@ is ommitted, current screen will survive."
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
     (static-when (and elscreen-on-emacs (= emacs-major-version 21))
-      (redraw-frame (selected-frame)))
+      (when window-system
+	(redraw-frame (selected-frame))))
     (elscreen-notify-screen-modification 'force)
     (run-hooks 'elscreen-goto-hook)
     screen)
