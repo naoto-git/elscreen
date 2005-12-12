@@ -1,4 +1,9 @@
-2005-12-12  Naoto Morishima  <naoto@morishima.net>
+2005-12-13  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.4.3 released.
+
+
+2005-12-11  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-make-frame-confs): Save current buffer.
 	* (elscreen-e21-tab-update): Use (replace-regexp-in-string) so
