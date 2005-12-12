@@ -1,7 +1,8 @@
 2005-12-12  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-make-frame-confs): Save current buffer.
-
+	* (elscreen-e21-tab-update): Use (replace-regexp-in-string) so
+	  that screen-names do not lose its properties.
 
 2005-12-09  Naoto Morishima  <naoto@morishima.net>
 

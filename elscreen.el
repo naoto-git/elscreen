@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.2.1 (December 12, 2005)")
+(defconst elscreen-version "1.4.2.2 (December 12, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -78,7 +78,6 @@ If this is nil, no message will be displayed."
 (defcustom elscreen-mode-to-nickname-alist
   '(("^mew-draft-mode$" . (lambda (buf) (format "Mew(%s)" (buffer-name buf))))
     ("^mew-" . "Mew")
-    ("^w3m-mode" . (lambda (buf) (w3m-current-title)))
     ("^irchat-" . "IRChat")
     ("^liece-" . "Liece")
     ("^dired-mode$" .
@@ -1150,6 +1149,9 @@ is ommitted, current screen will survive."
 				     elscreen-tab-width t))
 	      (current-screen (elscreen-get-current-screen))
 	      (previous-screen (elscreen-get-previous-screen))
+	      (half-space (propertize
+			   " "
+			   'display '(space :width 0.5)))
 	      (tab-separator (propertize
 			      " "
 			      'face 'elscreen-tab-background-face
@@ -1170,43 +1172,31 @@ is ommitted, current screen will survive."
 
 	    (mapcar
 	     (lambda (screen)
-	       (let ((face (if (eq current-screen screen)
-			       'elscreen-tab-current-screen-face
-			     'elscreen-tab-other-screen-face)))
-		 (when elscreen-tab-display-kill-screen
-		   (setq elscreen-e21-tab-format
-			 (nconc
-			  elscreen-e21-tab-format
-			  (list
+	       (setq elscreen-e21-tab-format
+		     (nconc
+		      elscreen-e21-tab-format
+		      (list
+		       (propertize
+			(concat
+			 (when elscreen-tab-display-kill-screen
 			   (propertize
-			    "[X]"
-			    'face face
+			    (concat "[X]" half-space)
 			    'local-map (elscreen-e21-tab-create-keymap
-					'elscreen-kill screen))
-			   (propertize
-			    " "
-			    'face face
-			    'local-map (elscreen-e21-tab-create-keymap))))))
-
-		 (setq elscreen-e21-tab-format
-		       (nconc
-			elscreen-e21-tab-format
-			(list
+					'elscreen-kill screen)))
 			 (propertize
-			  (format "%d%s %s"
+			  (format "%d%s%s%s"
 				  screen
 				  (elscreen-status-label screen)
-				  (mapconcat
-				   (lambda (c)
-				     (if (eq c ?%)
-					 "%%"
-				       (char-to-string c)))
-				   (get-alist screen screen-to-name-alist)
-				   ""))
-			  'face face
+				  half-space
+				  (replace-regexp-in-string
+				   "%" "%%"
+				   (get-alist screen screen-to-name-alist)))
 			  'local-map (elscreen-e21-tab-create-keymap
-				      'elscreen-goto screen))
-			 tab-separator)))))
+				      'elscreen-goto screen)))
+			'face (if (eq current-screen screen)
+				  'elscreen-tab-current-screen-face
+				'elscreen-tab-other-screen-face))
+		       tab-separator))))
 	     screen-list)
 
 	    (setq elscreen-e21-tab-format
