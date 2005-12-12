@@ -1045,11 +1045,21 @@ is ommitted, current screen will survive."
 		"Create Screen"
 		'elscreen-create
 		:help "Create a new screen and switch to it")
+	  (list 'elscreen-clone
+		'menu-item
+		"Clone Screen"
+		'elscreen-clone
+		:help "Create a new screen with the window-configuration of current screen")
 	  (list 'elscreen-kill
 		'menu-item
 		"Kill Screen"
 		'elscreen-kill
 		:help "Kill the current screen")
+	  (list 'elscreen-kill-screen-and-buffers
+		'menu-item
+		"Kill Screen and Buffers"
+		'elscreen-kill-screen-and-buffers
+		:help "Kill the current screen and buffers")
 	  (list 'elscreen-kill-others
 		'menu-item
 		"Kill Other Screens"
@@ -1233,7 +1243,9 @@ is ommitted, current screen will survive."
       :filter elscreen-xmas-menu-bar-filter
       "----"
       ["%_Create Screen" elscreen-create]
+      ["%_Clone Screen" elscreen-clone]
       ["%_Kill Screen" elscreen-kill]
+      ["%_Kill Screen and Buffers" elscreen-kill-screen-and-buffers]
       ["%_Kill Other Screens" elscreen-kill-others]
       ["%_Next Screen" elscreen-next]
       ["%_Previous Screen" elscreen-previous]
