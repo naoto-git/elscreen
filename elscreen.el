@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.2.4 (December 13, 2005)")
+(defconst elscreen-version "1.4.2.5 (December 13, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -428,19 +428,19 @@ starts up, and opens files with new screen if needed."
 
 (cond
  ((fboundp 'compare-window-configurations)) ; GNU Emacs
- ((fboundp 'window-configuration-equal) ; XEmacs
+ ((fboundp 'window-configuration-equal) ; XEmacs 21.5
   (defalias 'compare-window-configurations 'window-configuration-equal)))
 (defvar elscreen-screen-modified-hook-pwc nil)
 (defun elscreen-notify-screen-modification (&optional mode)
   (when (and (not (window-minibuffer-p))
-             (fboundp 'compare-window-configurations)
              (not elscreen-notify-screen-modification-suppress-flag)
              (or (eq mode 'force)
                  (eq mode 'force-immediately)
                  (null elscreen-screen-modified-hook-pwc)
-                 (not (compare-window-configurations
-                       (current-window-configuration)
-                       elscreen-screen-modified-hook-pwc))))
+		 (and (fboundp 'compare-window-configurations)
+		      (not (compare-window-configurations
+			    (current-window-configuration)
+			    elscreen-screen-modified-hook-pwc)))))
     (setq elscreen-screen-modified-hook-pwc
           (current-window-configuration))
     (elscreen-set-screen-modified)

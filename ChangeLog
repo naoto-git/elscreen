@@ -1,3 +1,9 @@
+2005-12-14  Naoto Morishima  <naoto@morishima.net>
+
+	* (elscreen-notify-screen-modification): Accept notifications on
+	  XEmacs 21.4, which does not have window-configuration-equal.
+
+
 2005-12-13  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-save-screen-excursion): Don't call
