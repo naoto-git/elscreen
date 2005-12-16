@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.2.5 (December 13, 2005)")
+(defconst elscreen-version "1.4.2.6 (December 16, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 13, 2005
+;; Revised:  December 16, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -202,7 +202,8 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "n"    'elscreen-next)
 (define-key elscreen-map "\C-a" 'elscreen-toggle)
 (define-key elscreen-map "a"    'elscreen-toggle)
-(define-key elscreen-map "g"    'elscreen-select-and-goto)
+(define-key elscreen-map "'"    'elscreen-goto)
+(define-key elscreen-map "\""   'elscreen-select-and-goto)
 (define-key elscreen-map "0"    'elscreen-jump-0)
 (define-key elscreen-map "1"    'elscreen-jump)
 (define-key elscreen-map "2"    'elscreen-jump)
