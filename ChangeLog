@@ -1,9 +1,16 @@
+2005-12-17  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.4.3 released.
+
+
 2005-12-16  Naoto Morishima  <naoto@morishima.net>
 
 	* (elscreen-select-and-goto): Key binding is changed to <prefix> ",
 	  for more compatibility with GNU screen.
 	* (elscreen-goto): Now <prefix> ' is bound to this function, for
 	  compatibility with GNU screen.
+	* (elscreen-display-time): Display load average in addition to
+	  current time.
 
 
 2005-12-14  Naoto Morishima  <naoto@morishima.net>
@@ -28,7 +35,7 @@
 
 	* (elscreen-make-frame-confs): Save current buffer.
 	* (elscreen-e21-tab-update): Use (replace-regexp-in-string) so
-	  that screen-names do not lose its properties.
+	  that screen-names do not lose their properties.
 
 
 2005-12-09  Naoto Morishima  <naoto@morishima.net>

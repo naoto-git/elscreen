@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.2.6 (December 16, 2005)")
+(defconst elscreen-version "1.4.3 (December 17, 2005)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 16, 2005
+;; Revised:  December 17, 2005
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@
   :group 'elscreen)
 
 (defcustom elscreen-display-screen-number t
-  "*If non-nil, show the number of the current screen in the mode line."
+  "*If non-nil, show the number of current screen in the mode line."
   :type 'boolean
   :tag "Show screen number"
   :group 'elscreen)
@@ -219,6 +219,7 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "w"    'elscreen-display-screen-name-list)
 (define-key elscreen-map "\C-m" 'elscreen-display-last-message)
 (define-key elscreen-map "m"    'elscreen-display-last-message)
+(define-key elscreen-map "\C-t" 'elscreen-display-time)
 (define-key elscreen-map "t"    'elscreen-display-time)
 (define-key elscreen-map "A"    'elscreen-screen-nickname)
 (define-key elscreen-map "b"    'elscreen-find-and-goto-by-buffer)
@@ -251,8 +252,8 @@ starts up, and opens files with new screen if needed."
 (defvar elscreen-help "ElScreen keys:
   \\[elscreen-create]    Create a new screen and switch to it
   \\[elscreen-clone]    Create a new screen with the window-configuration of current screen
-  \\[elscreen-kill]    Kill the current screen
-  \\[elscreen-kill-screen-and-buffers]  Kill the current screen and buffers
+  \\[elscreen-kill]    Kill current screen
+  \\[elscreen-kill-screen-and-buffers]  Kill current screen and buffers
   \\[elscreen-kill-others]    Kill other screens
   \\[elscreen-next]    Switch to the \"next\" screen in a cyclic order
   \\[elscreen-previous]    Switch to the \"previous\" screen in a cyclic order
@@ -263,7 +264,7 @@ starts up, and opens files with new screen if needed."
   \\[elscreen-jump-9]
   \\[elscreen-swap]  Swap current screen with previous one
   \\[elscreen-display-screen-name-list]    Show list of screens
-  \\[elscreen-screen-nickname]    Name the current screen
+  \\[elscreen-screen-nickname]    Name current screen
   \\[elscreen-display-last-message]    Show last message
   \\[elscreen-display-time]    Show time
   \\[elscreen-find-and-goto-by-buffer]    Switch to the screen in which specified buffer is displayed
@@ -675,7 +676,7 @@ If FRAME is omitted, selected-frame is used."
              nil)))))))
 
 (defun elscreen-get-screen-create (buffer) ;# obsolete
-  (elscreen-message "`elscreen-get-screen' is obsoleted. Use `elscreen-find-and-goto-by-buffer' instead.")
+  (elscreen-message "`elscreen-get-screen' is obsoleted. Use `elscreen-find-and-goto-by-buffer' with 3rd argument of t instead.")
   (elscreen-find-and-goto-by-buffer (get-buffer-create buffer) 'create))
 (make-obsolete 'elscreen-get-screen-create 'elscreen-find-and-goto-by-buffer)
 
@@ -693,7 +694,7 @@ Default value for SEC is 3."
 ;;; Create & Kill & Goto
 
 (defun elscreen-create ()
-  "Create a new screen."
+  "Create a new screen and switch to it."
   (interactive)
   (let ((screen (elscreen-create-internal)))
     (if screen
@@ -790,7 +791,7 @@ is ommitted, current screen will survive."
 
 (defvar elscreen-goto-hook nil)
 (defun elscreen-goto (screen)
-  "Jump to SCREEN."
+  "Switch to screen SCREEN."
   (interactive "NGoto screen number: ")
   (cond
    ((eq (elscreen-get-current-screen) screen))
@@ -843,7 +844,7 @@ is ommitted, current screen will survive."
       (elscreen-goto previous-screen)))))
 
 (defun elscreen-toggle ()
-  "Toggle to the last screen."
+  "Toggle to the screen selected previously."
   (interactive)
   (cond
    ((elscreen-one-screen-p)
@@ -865,6 +866,7 @@ is ommitted, current screen will survive."
 (defalias 'elscreen-jump-9 'elscreen-jump)
 
 (defun elscreen-swap ()
+  "Interchange screens selected currently and previously."
   (interactive)
   (let* ((current-screen (elscreen-get-current-screen))
          (previous-screen (elscreen-get-previous-screen))
@@ -1053,12 +1055,12 @@ is ommitted, current screen will survive."
                 'menu-item
                 "Kill Screen"
                 'elscreen-kill
-                :help "Kill the current screen")
+                :help "Kill current screen")
           (list 'elscreen-kill-screen-and-buffers
                 'menu-item
                 "Kill Screen and Buffers"
                 'elscreen-kill-screen-and-buffers
-                :help "Kill the current screen and buffers")
+                :help "Kill current screen and buffers")
           (list 'elscreen-kill-others
                 'menu-item
                 "Kill Other Screens"
@@ -1298,7 +1300,7 @@ is ommitted, current screen will survive."
 (elscreen-set-help 'elscreen-help)
 
 (defun elscreen-help ()
-  "Help about screen functions."
+  "Show key bindings of ElScreen and Add-On softwares."
   (interactive)
   (with-output-to-temp-buffer "*ElScreen Help*"
     (princ (substitute-command-keys
@@ -1320,15 +1322,22 @@ is ommitted, current screen will survive."
   (redraw-frame (selected-frame)))
 
 (defun elscreen-display-last-message ()
-  "Display the last message."
+  "Repeat the last message displayed in the mini-buffer."
   (interactive)
   (elscreen-message elscreen-last-message 5))
 
 (defun elscreen-display-time ()
-  "Display current time."
+  "Show system information."
   (interactive)
   (elscreen-message
-   (concat (current-time-string) " " (nth 1 (current-time-zone))) 3))
+   (format "%s %s / %s"
+	   (current-time-string)
+	   (nth 1 (current-time-zone))
+	   (mapconcat
+	    (lambda (load)
+	      (format "%.2f" (/ load 100.0)))
+	    (load-average) " "))
+   3))
 
 (defun elscreen-select-and-goto ()
   (interactive)
