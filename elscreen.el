@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.6 (July 08, 2006)")
+(defconst elscreen-version "1.4.3.7 (July 12, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 08, 2006
+;; Revised:  July 12, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -385,12 +385,14 @@ starts up, and opens files with new screen if needed."
 (defun elscreen-get-current-screen (&optional frame)
   (let* ((frame (or frame (selected-frame)))
          (screen-history (elscreen-get-conf-list frame 'screen-history)))
-    (car screen-history)))
+    (or (car screen-history)
+        (car (sort (elscreen-get-screen-list) '<)))))
 
 (defun elscreen-get-previous-screen (&optional frame)
   (let* ((frame (or frame (selected-frame)))
          (screen-history (elscreen-get-conf-list frame 'screen-history)))
-    (cadr screen-history)))
+    (or (cadr screen-history)
+        (car (sort (elscreen-get-screen-list) '<)))))
 
 (defun elscreen-delete-screen-from-history (value &optional frame)
   (let* ((frame (or frame (selected-frame)))

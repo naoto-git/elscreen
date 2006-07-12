@@ -1,5 +1,11 @@
-2006-07-08  Naoto Morishima  <naoto@morishima.net>
+2006-07-12  Naoto Morishima  <naoto@morishima.net>
 
+        * (elscreen-get-current-screen): Return minimum screen when the
+          value from screen-history is nil.
+        * (elscreen-get-previous-screen): Ditto.
+
+
+2006-07-08  Naoto Morishima  <naoto@morishima.net>
         * (elscreen-make-frame-confs): Change structure of
           elscreen-frame-confs as following: 'screen-property and
           'screen-history added.  'status removed ('current-screen and
