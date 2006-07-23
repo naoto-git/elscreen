@@ -1102,9 +1102,7 @@ is ommitted, current screen will survive."
                    (elscreen-screen-modified-p 'elscreen-menu-bar-update)))
       (let ((screen-list (sort (elscreen-get-screen-list) '<))
             (screen-to-name-alist (elscreen-get-screen-to-name-alist))
-            (elscreen-menu nil)
-            (current-screen (elscreen-get-current-screen))
-            (previous-screen (elscreen-get-previous-screen)))
+            (elscreen-menu nil))
         (setq elscreen-menu
               (mapcar
                (lambda (screen)
@@ -1181,7 +1179,6 @@ is ommitted, current screen will survive."
         (let ((screen-list (sort (elscreen-get-screen-list) '<))
               (screen-to-name-alist (elscreen-get-screen-to-name-alist))
               (current-screen (elscreen-get-current-screen))
-              (previous-screen (elscreen-get-previous-screen))
               (half-space (eval-when-compile
                             (propertize
                              " "
