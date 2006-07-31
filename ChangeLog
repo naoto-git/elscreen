@@ -1,3 +1,19 @@
+2006-07-31  Naoto Morishima  <naoto@morishima.net>
+
+        * (elscreen-run-screen-update-hook): Don't invoke
+          elscreen-screen-update-hook when elscreen-frame-confs is nil.
+        * elscreen-e21-menu-bar-command-entries: Add new entries.
+        * elscreen-xmas-menu-bar-command-entries: Likewise.
+        * elscreen-menubar: Renamed to...
+        * elscreen-xmas-menubar: this.
+        * elscreen-xmas-tab-glyph: New variable for internal use.
+        * (elscreen-xmas-tab-update): New function to support tab on
+          XEmacs.
+        * (elscreen-display-screen-number-toggle): Renamed to...
+        * (elscreen-toggle-display-screen-number): this.
+        * (elscreen-toggle-display-tab): New function.
+
+
 2006-07-12  Naoto Morishima  <naoto@morishima.net>
 
         * (elscreen-get-current-screen): Return minimum screen when the

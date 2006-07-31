@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.7 (July 12, 2006)")
+(defconst elscreen-version "1.4.3.9 (July 31, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 12, 2006
+;; Revised:  July 31, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -118,29 +118,37 @@ starts up, and opens files with new screen if needed."
   :type 'boolean
   :group 'elscreen)
 
-(static-when elscreen-on-emacs ;; GNU Emacs 21
-  (defvar elscreen-display-tab-set-nil-hook nil)
-  (defcustom elscreen-display-tab t
-    "Non-nil to display the tabs at the top of screen."
-    :type 'boolean
-    :set (lambda (symbol value)
-           (custom-set-default symbol value)
+(defcustom elscreen-display-tab t
+  "Non-nil to display the tabs at the top of screen."
+  :type 'boolean
+  :set (lambda (symbol value)
+         (custom-set-default symbol value)
+         (static-cond
+          (elscreen-on-emacs
            (when (fboundp 'elscreen-e21-tab-update)
-             (elscreen-e21-tab-update t)
-             (run-hooks 'elscreen-display-tab-set-nil-hook)))
-    :group 'elscreen)
+             (elscreen-e21-tab-update t)))
+          (elscreen-on-xemacs
+           (when (fboundp 'elscreen-xmas-tab-update)
+             (elscreen-xmas-tab-update t)))))
+  :group 'elscreen)
 
-  (defcustom elscreen-tab-width 16
-    "Tab width (should be equal or greater than 6)."
-    :type '(integer :size 4)
-    :set (lambda (symbol value)
-           (when (and (numberp value)
-                      (>= value 6))
-             (custom-set-default symbol value)
+(defcustom elscreen-tab-width 16
+  "Tab width (should be equal or greater than 6)."
+  :type '(integer :size 4)
+  :set (lambda (symbol value)
+         (when (and (numberp value)
+                    (>= value 6))
+           (custom-set-default symbol value)
+           (static-cond
+            (elscreen-on-emacs
              (when (fboundp 'elscreen-e21-tab-update)
-               (elscreen-e21-tab-update t))))
-    :group 'elscreen)
+               (elscreen-e21-tab-update t)))
+            (elscreen-on-xemacs
+             (when (fboundp 'elscreen-xmas-tab-update)
+               (elscreen-xmas-tab-update t))))))
+  :group 'elscreen)
 
+(static-when elscreen-on-emacs ;; GNU Emacs 21
   (make-obsolete-variable 'elscreen-tab-display-create-screen
                           'elscreen-tab-display-control)
   (defcustom elscreen-tab-display-control t
@@ -236,7 +244,8 @@ starts up, and opens files with new screen if needed."
 (define-key elscreen-map "\C-r" 'elscreen-find-file-read-only)
 (define-key elscreen-map "d"    'elscreen-dired)
 (define-key elscreen-map "\M-x" 'elscreen-execute-extended-command)
-(define-key elscreen-map "i"    'elscreen-display-screen-number-toggle)
+(define-key elscreen-map "i"    'elscreen-toggle-display-screen-number)
+(define-key elscreen-map "T"    'elscreen-toggle-display-tab)
 (define-key elscreen-map "?"    'elscreen-help)
 (define-key elscreen-map "v"    'elscreen-display-version)
 (define-key elscreen-map "j"    'elscreen-link)
@@ -281,7 +290,8 @@ starts up, and opens files with new screen if needed."
   \\[elscreen-find-file-read-only]  Create new screen and open file but don't allow changes
   \\[elscreen-dired]    Create new screen and run dired
   \\[elscreen-execute-extended-command]  Read function name, then call it with new screen
-  \\[elscreen-display-screen-number-toggle]    Show/hide the screen number in the mode line
+  \\[elscreen-toggle-display-screen-number]    Show/hide the screen number in the mode line
+  \\[elscreen-toggle-display-tab]    Show/hide the tab at the top of screen
   \\[elscreen-display-version]    Show ElScreen version
   \\[elscreen-help]    Show this help"
   "*Help shown by elscreen-help-mode")
@@ -417,8 +427,9 @@ starts up, and opens files with new screen if needed."
 
 (defvar elscreen-screen-update-hook nil)
 (defun elscreen-run-screen-update-hook ()
-  (elscreen-notify-screen-modification-suppress
-   (run-hooks 'elscreen-screen-update-hook))
+  (when elscreen-frame-confs
+    (elscreen-notify-screen-modification-suppress
+     (run-hooks 'elscreen-screen-update-hook)))
   (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (defun elscreen-screen-modified-p (inquirer &optional frame)
@@ -1029,11 +1040,10 @@ is ommitted, current screen will survive."
   ;; Mode Line
   (defvar elscreen-e21-mode-line-string "[0]")
   (defun elscreen-e21-mode-line-update ()
-    (let (screen)
-      (when (and (elscreen-screen-modified-p 'elscreen-e21-mode-line-update)
-                 (setq screen (elscreen-get-current-screen)))
-        (setq elscreen-e21-mode-line-string (format "[%d]" screen))
-        (force-mode-line-update))))
+    (when (elscreen-screen-modified-p 'elscreen-e21-mode-line-update)
+      (setq elscreen-e21-mode-line-string
+            (format "[%d]" (elscreen-get-current-screen)))
+      (force-mode-line-update)))
 
   (let ((point (or
                 ;; GNU Emacs 21.3.50 or later
@@ -1094,7 +1104,22 @@ is ommitted, current screen will survive."
                 'menu-item
                 "Toggle Screen"
                 'elscreen-toggle
-                :help "Toggle to the screen selected previously")))
+                :help "Toggle to the screen selected previously")
+          (list 'elscreen-command-separator
+                'menu-item
+                "--")
+          (list 'elscreen-toggle-display-screen-number
+                'menu-item
+                "Display Screen Number"
+                'elscreen-toggle-display-screen-number
+                :help "Display screen number on the mode line"
+                :button '(:toggle . elscreen-display-screen-number))
+          (list 'elscreen-toggle-display-tab
+                'menu-item
+                "Display Tab"
+                'elscreen-toggle-display-tab
+                :help "Display tab on the top of screen"
+                :button '(:toggle . elscreen-display-tab))))
 
   (defun elscreen-e21-menu-bar-update (&optional force)
     (when (and (lookup-key (current-global-map) [menu-bar elscreen])
@@ -1260,11 +1285,10 @@ is ommitted, current screen will survive."
   ;; Mode Line
   (defvar elscreen-xmas-mode-line-string "[0]")
   (defun elscreen-xmas-mode-line-update ()
-    (let (screen)
-      (when (and (elscreen-screen-modified-p 'elscreen-xmas-mode-line-update)
-                 (setq screen (elscreen-get-current-screen)))
-        (setq elscreen-xmas-mode-line-string (format "[%d]" screen))
-        (force-mode-line-update))))
+    (when (elscreen-screen-modified-p 'elscreen-xmas-mode-line-update)
+      (setq elscreen-xmas-mode-line-string
+            (format "[%d]" (elscreen-get-current-screen)))
+      (force-mode-line-update)))
 
   (let ((point (memq 'global-mode-string mode-line-format))
         (elscreen-mode-line-elm '(elscreen-display-screen-number
@@ -1286,10 +1310,15 @@ is ommitted, current screen will survive."
       ["%_Kill Other Screens" elscreen-kill-others]
       ["%_Next Screen" elscreen-next]
       ["%_Previous Screen" elscreen-previous]
-      ["%_Toggle Screen" elscreen-toggle]))
+      ["%_Toggle Screen" elscreen-toggle]
+      "----"
+      ["%_Display Screen Number" elscreen-toggle-display-screen-number
+       :style toggle :selected elscreen-display-screen-number]
+      ["%_Display Tab" elscreen-toggle-display-tab
+       :style toggle :selected elscreen-display-tab]))
 
-  (defconst elscreen-menubar (copy-sequence default-menubar))
-  (let ((menubar elscreen-menubar))
+  (defconst elscreen-xmas-menubar (copy-sequence default-menubar))
+  (let ((menubar elscreen-xmas-menubar))
     (catch 'buffers-menu-search
       (while (car menubar)
         (when (equal (car (car menubar)) "%_Buffers")
@@ -1298,7 +1327,7 @@ is ommitted, current screen will survive."
     (setcdr menubar
             (cons elscreen-xmas-menu-bar-command-entries (cdr menubar))))
 
-  (set-menubar elscreen-menubar)
+  (set-menubar elscreen-xmas-menubar)
   (set-menubar-dirty-flag)
 
   (defun elscreen-xmas-menu-bar-filter (menu)
@@ -1318,7 +1347,58 @@ is ommitted, current screen will survive."
                                      (key-description elscreen-prefix-key)
                                      screen)))
              screen-list))
-      (append elscreen-menu menu))))
+      (append elscreen-menu menu)))
+
+  ;; Tab
+  (defvar elscreen-xmas-tab-glyph (make-glyph))
+  (let* ((gutter-string (copy-sequence "\n"))
+         (gutter-elscreen-tab-extent (make-extent 0 1 gutter-string)))
+    (set-extent-begin-glyph gutter-elscreen-tab-extent elscreen-xmas-tab-glyph)
+    (mapcar
+     (lambda (console-type)
+       (when (valid-image-instantiator-format-p 'tab-control console-type)
+         (set-specifier top-gutter-border-width 0 'global console-type)
+         (set-gutter-element top-gutter 'elscreen-tab
+                             gutter-string 'global console-type)))
+     (console-type-list)))
+
+  (defun elscreen-xmas-tab-update (&optional force)
+    (if (or (not elscreen-display-tab)
+            (window-dedicated-p (selected-window)))
+        (set-gutter-element-visible-p default-gutter-visible-p
+                                      'elscreen-tab nil)
+      (when (and (not (window-minibuffer-p))
+                 (or (elscreen-screen-modified-p 'elscreen-tab-update) force))
+        (set-gutter-element-visible-p default-gutter-visible-p
+                                      'elscreen-tab t)
+        (when (valid-image-instantiator-format-p 'tab-control)
+          (let* ((screen-list (sort (elscreen-get-screen-list) '<))
+                 (screen-to-name-alist (elscreen-get-screen-to-name-alist))
+                 (current-screen (elscreen-get-current-screen))
+                 (tab-items
+                  (mapcar
+                   (lambda (screen)
+                     (vector
+                      (format "%d%s %s" screen
+                              (elscreen-status-label screen)
+                              (elscreen-truncate-screen-name
+                               (get-alist screen screen-to-name-alist)
+                               elscreen-tab-width t))
+                      `(elscreen-goto ,screen)
+                      :selected (eq screen current-screen)))
+                   screen-list)))
+            (set-glyph-image
+             elscreen-xmas-tab-glyph
+             (vector 'tab-control
+                     :descriptor "ElScreen"
+                     :face 'default
+                     :orientation 'top
+                     :pixel-width '(gutter-pixel-width)
+                     :items tab-items)
+             (selected-frame)))
+          (set-gutter-dirty-p 'top)))))
+
+  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update))
 
 ;;; Help
 
@@ -1343,11 +1423,17 @@ is ommitted, current screen will survive."
   (interactive)
   (elscreen-message (concat "ElScreen version " elscreen-version)))
 
-(defun elscreen-display-screen-number-toggle ()
+(defun elscreen-toggle-display-screen-number ()
   "Toggle the screen number in the mode line."
   (interactive)
   (setq elscreen-display-screen-number (null elscreen-display-screen-number))
-  (redraw-frame (selected-frame)))
+  (elscreen-notify-screen-modification 'force))
+
+(defun elscreen-toggle-display-tab ()
+  "Toggle the tab on the top of screen."
+  (interactive)
+  (setq elscreen-display-tab (null elscreen-display-tab))
+  (elscreen-notify-screen-modification 'force))
 
 (defun elscreen-display-last-message ()
   "Repeat the last message displayed in the mini-buffer."
