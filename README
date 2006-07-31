@@ -42,7 +42,7 @@ You may use following sequences on ElScreen:
   C-z c
   C-z C-c  Create a new screen and switch to it.
   C-z C    Create a new screen with the window-configuration of the
-           current screen. 
+           current screen.
   C-z k
   C-z C-k  Kill current screen.
   C-z M-k  Kill current screen and buffers.
@@ -72,6 +72,7 @@ You may use following sequences on ElScreen:
   C-z d    Create new screen and run dired.
   C-z M-x  Read function name, then call it with new screen.
   C-z i    Show/hide the screen number in the mode line.
+  C-z T    Show/hide the tab on the top of each frame.
   C-z v    Display ElScreen version.
   C-z ?    Show key bindings of ElScreen and Add-On softwares.
 
@@ -85,17 +86,12 @@ can be set in .emacs file directly or "Options" in your menu bar.
 
     ElScreen prefix-key.  The default value is `\C-z'.
 
-  elscreen-display-screen-number
-
-    If non nil, show the number of the current screen in mode
-    line.  The default value is `t'. 
-
   elscreen-buffer-to-nickname-alist
 
     The pairs of buffer-name and corresponding screen nickname, which
     are listed by 'elscreen-display-screen-name-list' only when
     major-mode cannot determine its screen nickname.  The default
-    value is: 
+    value is:
 
         '(("^mew-" . "Mew")
           ("^irchat-" . "IRChat")
@@ -121,12 +117,17 @@ can be set in .emacs file directly or "Options" in your menu bar.
     when starting up, and opens files with new screens if needed.  The
     default value is `t'.
 
-  elscreen-display-tab (only for GNU Emacs 21)
+  elscreen-display-screen-number
+
+    If non nil, show the number of the current screen in mode
+    line.  The default value is `t'.
+
+  elscreen-display-tab
 
     If non nil, display screen tabs at the top of frame.  The default
     value is `t'.
 
-  elscreen-tab-width (only for GNU Emacs 21)
+  elscreen-tab-width
 
     Label width of each tab.  The default value is 16.
 
@@ -151,9 +152,9 @@ ElScreen is available from the following anonymous ftp site.
 
 Bugs
 ----
-Under multiple-frame environment, screen numbers and tabs (only in
-GNU Emacs 21) displayed on mode line of each frame is changed at
-the same time.
+Under multiple-frame environment, screen numbers displayed on mode
+line of each frame is changed at the same time.  On GNU Emacs 21, tabs
+also has this restriction.
 
 
 Bug Reports
