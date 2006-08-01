@@ -160,7 +160,7 @@ starts up, and opens files with new screen if needed."
                           'elscreen-tab-display-control)
   (defcustom elscreen-tab-display-control t
     "Non-nil to display control tab at the most left side."
-    :tab "Show/Hide the Control Tab"
+    :tag "Show/Hide the Control Tab"
     :type 'boolean
     :set (lambda (symbol value)
            (custom-set-default symbol value)
@@ -170,7 +170,7 @@ starts up, and opens files with new screen if needed."
 
   (defcustom elscreen-tab-display-kill-screen t
     "Non-nil to display the icons to kill a screen at left side of each tab."
-    :tab "Show/Hide Buttons to Kill Screen on Each Tab"
+    :tag "Show/Hide Buttons to Kill Screen on Each Tab"
     :type 'boolean
     :set (lambda (symbol value)
            (custom-set-default symbol value)
