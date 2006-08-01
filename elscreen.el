@@ -43,34 +43,30 @@
 
 (defcustom elscreen-prefix-key "\C-z"
   "Prefix key for ElScreen commands."
+  :tag "Prefix Key of ElScreen"
   :type '(string :size 10)
-  :tag "Prefix-key"
   :set (lambda (symbol value)
          (when (boundp 'elscreen-map)
            (elscreen-set-prefix-key value))
          (custom-set-default symbol value))
   :group 'elscreen)
 
-(defcustom elscreen-display-screen-number t
-  "Non-nil to display the number of current screen in the mode line."
-  :type 'boolean
-  :tag "Show screen number"
-  :group 'elscreen)
-
 (defcustom elscreen-default-buffer-name "*scratch*"
   "Name of a buffer in new screen."
+  :tag "Name of Default Buffer"
   :type '(string :size 24)
-  :tag "Default buffer name"
   :group 'elscreen)
 
 (defcustom elscreen-default-buffer-initial-major-mode initial-major-mode
   "Major mode command symbol to use for the default buffer."
+  :tag "Major Mode for Default Buffer"
   :type 'function
   :group 'elscreen)
 
 (defcustom elscreen-default-buffer-initial-message initial-scratch-message
   "Initial message displayed in default buffer.
 If this is nil, no message will be displayed."
+  :tag "Message to Display in the Default Buffer"
   :type '(choice (text :tag "Message")
                  (const :tag "none" nil))
   :group 'elscreen)
@@ -89,7 +85,8 @@ If this is nil, no message will be displayed."
     ("^irchat-" . "IRChat")
     ("^liece-" . "Liece")
     ("^lookup-" . "Lookup"))
-  "Alist composed of the pair of mode-name and corresponding screen-name."
+  "Alist composed of the pair of name of major-mode and corresponding screen-name."
+  :tag "Alist to Derive Screen Names from Major Modes"
   :type '(alist :key-type string :value-type (choice string function))
   :set (lambda (symbol value)
          (custom-set-default symbol value)
@@ -105,6 +102,7 @@ If this is nil, no message will be displayed."
     ("*WL:Message*" . "Wanderlust"))
   "Alist composed of the pair of regular expression of
 buffer-name and corresponding screen-name."
+  :tag "Alist to Derive Screen Names from Major Modes"
   :type '(alist :key-type string :value-type (choice string function))
   :set (lambda (symbol value)
          (custom-set-default symbol value)
@@ -116,10 +114,18 @@ buffer-name and corresponding screen-name."
   "If non-nil, ElScreen processes command line when Emacsen
 starts up, and opens files with new screen if needed."
   :type 'boolean
+  :tag "Enable/Disable ElScreen to Process Command Line Arguments"
+  :group 'elscreen)
+
+(defcustom elscreen-display-screen-number t
+  "Non-nil to display the number of current screen in the mode line."
+  :tag "Show/Hide Screen Number on the mode-line"
+  :type 'boolean
   :group 'elscreen)
 
 (defcustom elscreen-display-tab t
   "Non-nil to display the tabs at the top of screen."
+  :tag "Show/Hide the Tab on the Top of Each Frame"
   :type 'boolean
   :set (lambda (symbol value)
          (custom-set-default symbol value)
@@ -134,6 +140,7 @@ starts up, and opens files with new screen if needed."
 
 (defcustom elscreen-tab-width 16
   "Tab width (should be equal or greater than 6)."
+  :tag "Width of Each Tab"
   :type '(integer :size 4)
   :set (lambda (symbol value)
          (when (and (numberp value)
@@ -153,6 +160,7 @@ starts up, and opens files with new screen if needed."
                           'elscreen-tab-display-control)
   (defcustom elscreen-tab-display-control t
     "Non-nil to display control tab at the most left side."
+    :tab "Show/Hide the Control Tab"
     :type 'boolean
     :set (lambda (symbol value)
            (custom-set-default symbol value)
@@ -162,6 +170,7 @@ starts up, and opens files with new screen if needed."
 
   (defcustom elscreen-tab-display-kill-screen t
     "Non-nil to display the icons to kill a screen at left side of each tab."
+    :tab "Show/Hide Buttons to Kill Screen on Each Tab"
     :type 'boolean
     :set (lambda (symbol value)
            (custom-set-default symbol value)
@@ -199,8 +208,7 @@ starts up, and opens files with new screen if needed."
       (((class color))
        (:background "blue" :foreground "black" :underline t)))
     "Face for tabs other than current screen one."
-    :group 'elscreen)
-  )
+    :group 'elscreen))
 
 ;;; Key & Menu bindings:
 
@@ -300,16 +308,10 @@ starts up, and opens files with new screen if needed."
 ;;; Code:
 
 (defvar elscreen-frame-confs nil
-  "*Alist that contains the information about screen configurations.")
+  "Alist that contains the information about screen configurations.")
 
 (defun elscreen-current-window-configuration ()
   (list (current-window-configuration) (point-marker)))
-
-(defun elscreen-apply-window-configuration (elscreen-window-configuration)
-  (let ((window-configuration (car elscreen-window-configuration))
-        (marker (cadr elscreen-window-configuration)))
-    (set-window-configuration window-configuration)
-    (and (marker-buffer marker) (goto-char marker))))
 
 (defun elscreen-default-window-configuration ()
   (let ((default-buffer (get-buffer elscreen-default-buffer-name)))
@@ -322,6 +324,13 @@ starts up, and opens files with new screen if needed."
         (insert elscreen-default-buffer-initial-message)
         (set-buffer-modified-p nil))
       (elscreen-current-window-configuration))))
+
+(defun elscreen-apply-window-configuration (elscreen-window-configuration)
+  (let ((window-configuration (car elscreen-window-configuration))
+        (marker (cadr elscreen-window-configuration)))
+    (set-window-configuration window-configuration)
+    (when (marker-buffer marker)
+      (goto-char marker))))
 
 (defun get-alist (key alist)
   (cdr (assoc key alist)))
@@ -395,14 +404,17 @@ starts up, and opens files with new screen if needed."
 (defun elscreen-get-current-screen (&optional frame)
   (let* ((frame (or frame (selected-frame)))
          (screen-history (elscreen-get-conf-list frame 'screen-history)))
-    (or (car screen-history)
-        (car (sort (elscreen-get-screen-list) '<)))))
+    (car screen-history)))
 
 (defun elscreen-get-previous-screen (&optional frame)
   (let* ((frame (or frame (selected-frame)))
          (screen-history (elscreen-get-conf-list frame 'screen-history)))
     (or (cadr screen-history)
-        (car (sort (elscreen-get-screen-list) '<)))))
+        (let ((screen-list (sort (elscreen-get-screen-list) '<)))
+          (if (and (eq (car screen-list) (elscreen-get-current-screen))
+                   (not (elscreen-one-screen-p)))
+              (cadr screen-list)
+            (car screen-list))))))
 
 (defun elscreen-delete-screen-from-history (value &optional frame)
   (let* ((frame (or frame (selected-frame)))
@@ -441,7 +453,7 @@ starts up, and opens files with new screen if needed."
     modified))
 
 (defun elscreen-set-screen-modified (&optional frame)
-  (let* ((frame (or frame (selected-frame))))
+  (let ((frame (or frame (selected-frame))))
     (elscreen-set-conf-list frame 'modified-inquirer nil))
   (add-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
@@ -456,10 +468,10 @@ starts up, and opens files with new screen if needed."
              (or (eq mode 'force)
                  (eq mode 'force-immediately)
                  (null elscreen-screen-modified-hook-pwc)
-                 (and (fboundp 'compare-window-configurations)
-                      (not (compare-window-configurations
-                            (current-window-configuration)
-                            elscreen-screen-modified-hook-pwc)))))
+                 (not (fboundp 'compare-window-configurations))
+                 (not (compare-window-configurations
+                       (current-window-configuration)
+                       elscreen-screen-modified-hook-pwc))))
     (setq elscreen-screen-modified-hook-pwc
           (current-window-configuration))
     (elscreen-set-screen-modified)
@@ -515,11 +527,15 @@ starts up, and opens files with new screen if needed."
     (elscreen-set-conf-list frame 'screen-property screen-property-list)))
 
 (defun elscreen-get-window-configuration (screen &optional frame)
+  "Return pair of window-configuration and marker of SCREEN in FRAME
+from `elscreen-frame-confs', a cons cell.
+If FRAME is omitted, selected-frame is used."
   (let* ((frame (or frame (selected-frame)))
          (screen-property (elscreen-get-screen-property screen frame)))
     (get-alist 'window-configuration screen-property)))
 
 (defun elscreen-set-window-configuration (screen winconf &optional frame)
+  "Set pair of window-configuration and marker of SCREEN in FRAME to WINCONF."
   (let* ((frame (or frame (selected-frame)))
          (screen-property (elscreen-get-screen-property screen frame)))
     (set-alist 'screen-property 'window-configuration winconf)
@@ -533,14 +549,16 @@ If FRAME is omitted, selected-frame is used."
     (get-alist 'nickname screen-property)))
 
 (defun elscreen-set-screen-nickname (screen nickname &optional frame)
-  "Set SCREEN's nickname to SCREEN-NICKNAME."
+  "Set nickname of SCREEN in FRAME to NICKNAME.
+If FRAME is omitted, selected-frame is used."
   (let* ((frame (or frame (selected-frame)))
          (screen-property (elscreen-get-screen-property screen frame)))
     (set-alist 'screen-property 'nickname nickname)
     (elscreen-set-screen-property screen screen-property frame)))
 
 (defun elscreen-delete-screen-nickname (screen &optional frame)
-  "Remove SCREEN's nickname from `elscreen-frame-confs'."
+  "Remove nickname of SCREEN in FRAME from `elscreen-frame-confs'.
+If FRAME is omitted, selected-frame is used."
   (let* ((frame (or frame (selected-frame)))
          (screen-property (elscreen-get-screen-property screen frame)))
     (remove-alist 'screen-property 'nickname)
@@ -591,6 +609,8 @@ If FRAME is omitted, selected-frame is used."
       (nconc (nreverse clone) tree))))
 
 (defmacro elscreen-save-screen-excursion (&rest body)
+  "Execute BODY, preserving ElScreen meta data.
+Return the value of the last form in BODY."
   (` (let ((original-buffer-list (buffer-list))
            (original-buffer-live-p nil)
            (original-elscreen-window-configuration
@@ -613,13 +633,17 @@ If FRAME is omitted, selected-frame is used."
              (bury-buffer (car (buffer-list)))))))))
 
 (defun elscreen-goto-internal (screen)
+  "Set the configuration of windows, buffers and markers previousuly
+stored as SCREEN."
   (let ((elscreen-window-configuration
          (elscreen-get-window-configuration screen)))
     (elscreen-apply-window-configuration elscreen-window-configuration)))
 
 (defvar elscreen-create-hook nil)
 (defun elscreen-create-internal (&optional noerror)
-  "Create a new screen."
+  "Create a new screen.
+If NOERROR is not nil, no message is displayed in mini buffer
+when error is occurred."
   (cond
    ((>= (elscreen-get-number-of-screens) 10)
     (unless noerror
@@ -898,7 +922,7 @@ is ommitted, current screen will survive."
   "Set nickname for current screen to SCREEN-NICKNAME."
   (interactive "sSet window title to: ")
   (cond
-   ((eq (length screen-nickname) 0)
+   ((zerop (length screen-nickname))
     (elscreen-delete-screen-nickname (elscreen-get-current-screen)))
    (t
     (elscreen-set-screen-nickname (elscreen-get-current-screen)
