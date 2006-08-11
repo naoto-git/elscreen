@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.10 (August 11, 2006)")
+(defconst elscreen-version "1.4.3.11 (August 12, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 11, 2006
+;; Revised:  August 12, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -388,27 +388,24 @@ starts up, and opens files with new screen if needed."
  (t ;; XEmacs
   (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)))
 
-(defsubst elscreen-get-conf-list (frame type)
-  (get-alist type (elscreen-get-frame-confs frame)))
+(defsubst elscreen-get-conf-list (type)
+  (get-alist type (elscreen-get-frame-confs (selected-frame))))
 
-(defsubst elscreen-set-conf-list (frame type conf-list)
-  (let ((frame-conf (elscreen-get-frame-confs frame)))
+(defsubst elscreen-set-conf-list (type conf-list)
+  (let ((frame-conf (elscreen-get-frame-confs (selected-frame))))
     (set-alist 'frame-conf type conf-list)))
 
-(defun elscreen-set-current-screen (value &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-history (elscreen-get-conf-list frame 'screen-history)))
+(defun elscreen-set-current-screen (value)
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
     (setq screen-history (cons value (delq value screen-history)))
-    (elscreen-set-conf-list frame 'screen-history screen-history)))
+    (elscreen-set-conf-list 'screen-history screen-history)))
 
-(defun elscreen-get-current-screen (&optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-history (elscreen-get-conf-list frame 'screen-history)))
+(defun elscreen-get-current-screen ()
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
     (car screen-history)))
 
-(defun elscreen-get-previous-screen (&optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-history (elscreen-get-conf-list frame 'screen-history)))
+(defun elscreen-get-previous-screen ()
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
     (or (cadr screen-history)
         (let ((screen-list (sort (elscreen-get-screen-list) '<)))
           (if (and (eq (car screen-list) (elscreen-get-current-screen))
@@ -416,17 +413,15 @@ starts up, and opens files with new screen if needed."
               (cadr screen-list)
             (car screen-list))))))
 
-(defun elscreen-delete-screen-from-history (value &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-history (elscreen-get-conf-list frame 'screen-history)))
+(defun elscreen-delete-screen-from-history (value)
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
     (setq screen-history (delq value screen-history))
-    (elscreen-set-conf-list frame 'screen-history screen-history)))
+    (elscreen-set-conf-list 'screen-history screen-history)))
 
-(defun elscreen-status-label (screen &optional default frame)
-  (let* ((default (or default " "))
-         (frame (or frame (selected-frame)))
-         (current-screen (elscreen-get-current-screen frame))
-         (previous-screen (elscreen-get-previous-screen frame)))
+(defun elscreen-status-label (screen &optional default)
+  (let ((default (or default " "))
+        (current-screen (elscreen-get-current-screen))
+        (previous-screen (elscreen-get-previous-screen)))
     (cond
      ((eq screen current-screen) "+")
      ((eq screen previous-screen) "-")
@@ -444,17 +439,15 @@ starts up, and opens files with new screen if needed."
      (run-hooks 'elscreen-screen-update-hook)))
   (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
-(defun elscreen-screen-modified-p (inquirer &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (inquirer-list (elscreen-get-conf-list frame 'modified-inquirer))
+(defun elscreen-screen-modified-p (inquirer)
+  (let* ((inquirer-list (elscreen-get-conf-list 'modified-inquirer))
          (modified (null (memq inquirer inquirer-list))))
     (add-to-list 'inquirer-list inquirer)
-    (elscreen-set-conf-list frame 'modified-inquirer inquirer-list)
+    (elscreen-set-conf-list 'modified-inquirer inquirer-list)
     modified))
 
-(defun elscreen-set-screen-modified (&optional frame)
-  (let ((frame (or frame (selected-frame))))
-    (elscreen-set-conf-list frame 'modified-inquirer nil))
+(defun elscreen-set-screen-modified ()
+  (elscreen-set-conf-list 'modified-inquirer nil)
   (add-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (cond
@@ -509,92 +502,70 @@ starts up, and opens files with new screen if needed."
  (select-frame-hook 'force) ;; XEmacs
  (Info-find-node-2 'force))
 
-(defun elscreen-get-screen-property (screen &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property-list (elscreen-get-conf-list frame 'screen-property)))
+(defun elscreen-get-screen-property (screen)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
     (get-alist screen screen-property-list)))
 
-(defun elscreen-set-screen-property (screen property &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property-list (elscreen-get-conf-list frame 'screen-property)))
+(defun elscreen-set-screen-property (screen property)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
     (set-alist 'screen-property-list screen property)
-    (elscreen-set-conf-list frame 'screen-property screen-property-list)))
+    (elscreen-set-conf-list 'screen-property screen-property-list)))
 
-(defun elscreen-delete-screen-property (screen &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property-list (elscreen-get-conf-list frame 'screen-property)))
+(defun elscreen-delete-screen-property (screen)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
     (remove-alist 'screen-property-list screen)
-    (elscreen-set-conf-list frame 'screen-property screen-property-list)))
+    (elscreen-set-conf-list 'screen-property screen-property-list)))
 
-(defun elscreen-get-window-configuration (screen &optional frame)
-  "Return pair of window-configuration and marker of SCREEN in FRAME
-from `elscreen-frame-confs', a cons cell.
-If FRAME is omitted, selected-frame is used."
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property (elscreen-get-screen-property screen frame)))
+(defun elscreen-get-window-configuration (screen)
+  "Return pair of window-configuration and marker of SCREEN
+from `elscreen-frame-confs', a cons cell."
+  (let ((screen-property (elscreen-get-screen-property screen)))
     (get-alist 'window-configuration screen-property)))
 
-(defun elscreen-set-window-configuration (screen winconf &optional frame)
-  "Set pair of window-configuration and marker of SCREEN in FRAME to WINCONF."
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property (elscreen-get-screen-property screen frame)))
+(defun elscreen-set-window-configuration (screen winconf)
+  "Set pair of window-configuration and marker of SCREEN to WINCONF."
+  (let ((screen-property (elscreen-get-screen-property screen)))
     (set-alist 'screen-property 'window-configuration winconf)
-    (elscreen-set-screen-property screen screen-property frame)))
+    (elscreen-set-screen-property screen screen-property)))
 
-(defun elscreen-get-screen-nickname (screen &optional frame)
-  "Return nickname of SCREEN in FRAME from `elscreen-frame-confs', a string.
-If FRAME is omitted, selected-frame is used."
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property (elscreen-get-screen-property screen frame)))
+(defun elscreen-get-screen-nickname (screen)
+  "Return nickname of SCREEN from `elscreen-frame-confs', a string."
+  (let ((screen-property (elscreen-get-screen-property screen)))
     (get-alist 'nickname screen-property)))
 
-(defun elscreen-set-screen-nickname (screen nickname &optional frame)
-  "Set nickname of SCREEN in FRAME to NICKNAME.
-If FRAME is omitted, selected-frame is used."
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property (elscreen-get-screen-property screen frame)))
+(defun elscreen-set-screen-nickname (screen nickname)
+  "Set nickname of SCREEN to NICKNAME."
+  (let ((screen-property (elscreen-get-screen-property screen)))
     (set-alist 'screen-property 'nickname nickname)
-    (elscreen-set-screen-property screen screen-property frame)))
+    (elscreen-set-screen-property screen screen-property)))
 
-(defun elscreen-delete-screen-nickname (screen &optional frame)
-  "Remove nickname of SCREEN in FRAME from `elscreen-frame-confs'.
-If FRAME is omitted, selected-frame is used."
-  (let* ((frame (or frame (selected-frame)))
-         (screen-property (elscreen-get-screen-property screen frame)))
+(defun elscreen-delete-screen-nickname (screen)
+  "Remove nickname of SCREEN from `elscreen-frame-confs'."
+  (let ((screen-property (elscreen-get-screen-property screen)))
     (remove-alist 'screen-property 'nickname)
-    (elscreen-set-screen-property screen screen-property frame)))
+    (elscreen-set-screen-property screen screen-property)))
 
-(defun elscreen-get-screen-to-name-alist-cache (&optional frame)
-  (let ((frame (or frame (selected-frame))))
-    (elscreen-get-conf-list frame 'screen-to-name-alist-cache)))
+(defun elscreen-get-screen-to-name-alist-cache ()
+  (elscreen-get-conf-list 'screen-to-name-alist-cache))
 
-(defun elscreen-set-screen-to-name-alist-cache (alist &optional frame)
-  (let ((frame (or frame (selected-frame))))
-    (elscreen-set-conf-list frame 'screen-to-name-alist-cache alist)))
+(defun elscreen-set-screen-to-name-alist-cache (alist)
+  (elscreen-set-conf-list 'screen-to-name-alist-cache alist))
 
-(defun elscreen-get-number-of-screens (&optional frame)
-  "Return total number of screens in FRAME.
-If FRAME is omitted, selected-frame is used."
-  (let ((frame (or frame (selected-frame))))
-    (length (elscreen-get-screen-list frame))))
+(defun elscreen-get-number-of-screens ()
+  "Return total number of screens."
+  (length (elscreen-get-screen-list)))
 
-(defun elscreen-one-screen-p (&optional frame)
-  "Return t if FRAME has only one screen.
-If FRAME is omitted, selected-frame is used."
-  (let ((frame (or frame (selected-frame))))
-    (= (elscreen-get-number-of-screens frame) 1)))
+(defun elscreen-one-screen-p ()
+  "Return t if there is only one screen."
+  (= (elscreen-get-number-of-screens) 1))
 
-(defun elscreen-get-screen-list (&optional frame)
-  "Return a list of screen numbers.
-If FRAME is omitted, selected-frame is used."
-  (let ((frame (or frame (selected-frame))))
-    (mapcar 'car (elscreen-get-conf-list frame 'screen-property))))
+(defun elscreen-get-screen-list ()
+  "Return a list of screen numbers."
+  (mapcar 'car (elscreen-get-conf-list 'screen-property)))
 
-(defun elscreen-screen-live-p (screen &optional frame)
-  "Return t when SCREEN on FRAME is alive.
-If FRAME is omitted, selected-frame is used."
-  (let* ((frame (or frame (selected-frame))))
-    (not (null (elscreen-get-window-configuration screen frame)))))
+(defun elscreen-screen-live-p (screen)
+  "Return t when SCREEN is alive."
+  (not (null (elscreen-get-window-configuration screen))))
 
 (defun elscreen-copy-tree (tree)
   (if (fboundp 'copy-tree)
@@ -663,9 +634,8 @@ when error is occurred."
       (run-hooks 'elscreen-create-hook)
       screen))))
 
-(defun elscreen-find-screen (condition &optional frame)
-  (let* ((frame (or frame (selected-frame)))
-         (screen-list (sort (elscreen-get-screen-list frame) '<)))
+(defun elscreen-find-screen (condition)
+  (let ((screen-list (sort (elscreen-get-screen-list) '<)))
     (elscreen-set-window-configuration
      (elscreen-get-current-screen)
      (elscreen-current-window-configuration))
@@ -719,12 +689,12 @@ when error is occurred."
        (lambda (screen)
          (elscreen-goto-internal screen)
          (save-selected-window
-           (catch 'find
+           (catch 'found
              (mapcar
               (lambda (window)
                 (select-window window)
                 (when (string-match major-mode-re (symbol-name major-mode))
-                  (throw 'find t)))
+                  (throw 'found t)))
               (window-list))
              nil)))))))
 

@@ -1,3 +1,33 @@
+2006-08-12  Naoto Morishima  <naoto@morishima.net>
+
+        * (elscreen-get-conf-list): Remove the argument to specify frame.
+          This function always affects selected-frame.
+        * (elscreen-get-conf-list): Likewise.
+        * (elscreen-set-conf-list): Likewise.
+        * (elscreen-set-current-screen): Likewise.
+        * (elscreen-get-current-screen): Likewise.
+        * (elscreen-get-previous-screen): Likewise.
+        * (elscreen-delete-screen-from-history): Likewise.
+        * (elscreen-status-label): Likewise.
+        * (elscreen-screen-modified-p): Likewise.
+        * (elscreen-set-screen-modified): Likewise.
+        * (elscreen-get-screen-property): Likewise.
+        * (elscreen-set-screen-property): Likewise.
+        * (elscreen-delete-screen-property): Likewise.
+        * (elscreen-get-window-configuration): Likewise.
+        * (elscreen-set-window-configuration): Likewise.
+        * (elscreen-get-screen-nickname): Likewise.
+        * (elscreen-set-screen-nickname): Likewise.
+        * (elscreen-delete-screen-nickname): Likewise.
+        * (elscreen-get-screen-to-name-alist-cache): Likewise.
+        * (elscreen-set-screen-to-name-alist-cache): Likewise.
+        * (elscreen-get-number-of-screens): Likewise.
+        * (elscreen-one-screen-p): Likewise.
+        * (elscreen-get-screen-list): Likewise.
+        * (elscreen-screen-live-p): Likewise.
+        * (elscreen-find-screen): Likewise.
+
+
 2006-08-11  Naoto Morishima  <naoto@morishima.net>
 
         * (elscreen-truncate-screen-name): Fully rewritten.
