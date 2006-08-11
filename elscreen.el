@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.9 (July 31, 2006)")
+(defconst elscreen-version "1.4.3.10 (August 11, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 31, 2006
+;; Revised:  August 11, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -811,7 +811,7 @@ is ommitted, current screen will survive."
          (screen-list (delq screen (sort (elscreen-get-screen-list) '<)))
          screen-list-string)
     (cond
-     ((and (null screen-list))
+     ((null screen-list)
       (when (interactive-p)
         (elscreen-message "There is only one screen, cannot kill")))
      ((or
@@ -1029,18 +1029,16 @@ is ommitted, current screen will survive."
   (elscreen-get-screen-to-name-alist-cache))
 
 (defun elscreen-truncate-screen-name (screen-name truncate-length &optional padding)
-  (if (and (> truncate-length 3)
-           (> (string-width screen-name) truncate-length))
-      (setq screen-name
-            (truncate-string-to-width
-             (concat (truncate-string-to-width
-                      screen-name (- truncate-length 3))
-                     "...")
-             truncate-length nil ?.))
-    (when padding
-      (setq screen-name (truncate-string-to-width
-                         screen-name truncate-length nil ?\ ))))
-  screen-name)
+  (let ((truncate-length (max truncate-length 4)))
+    (cond
+     ((> (string-width screen-name) truncate-length)
+      (concat (truncate-string-to-width screen-name (- truncate-length 3)
+                                        nil ?.)
+              "..."))
+     (padding
+      (truncate-string-to-width screen-name truncate-length nil ?\ ))
+     (t
+      screen-name))))
 
 (defun elscreen-display-screen-name-list ()
   "Display the list of screens in mini-buffer."
