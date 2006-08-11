@@ -661,8 +661,7 @@ when error is occurred."
          (target-screen (elscreen-find-screen
                          (lambda (screen)
                            (elscreen-goto-internal screen)
-                           (member buffer
-                                   (mapcar 'window-buffer (window-list)))))))
+                           (not (null (get-buffer-window buffer)))))))
     (when (and (null target-screen) create)
       (cond
        ((null buffer))
@@ -1556,12 +1555,7 @@ creating one if none already exists."
     (when target-screen
       (elscreen-goto target-screen)
       (unless noselect
-        (select-window
-         (get-alist buffer-name
-                    (mapcar
-                     (lambda (window)
-                       (cons (buffer-name (window-buffer window)) window))
-                     (window-list))))))
+        (select-window (get-buffer-window buffer-name))))
     target-screen))
 
 (defun elscreen-find-file (filename)
