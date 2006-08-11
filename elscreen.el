@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.11 (August 12, 2006)")
+(defconst elscreen-version "1.4.3.13 (August 12, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -634,20 +634,27 @@ when error is occurred."
       (run-hooks 'elscreen-create-hook)
       screen))))
 
-(defun elscreen-find-screen (condition)
-  (let ((screen-list (sort (elscreen-get-screen-list) '<)))
-    (elscreen-set-window-configuration
-     (elscreen-get-current-screen)
-     (elscreen-current-window-configuration))
-    (elscreen-notify-screen-modification-suppress
-     (catch 'found
+(defun elscreen-find-screens (condition)
+  (let ((screen-list (sort (elscreen-get-screen-list) '<))
+        result)
+    (save-current-buffer
+      (elscreen-set-window-configuration
+       (elscreen-get-current-screen)
+       (elscreen-current-window-configuration))
+      (elscreen-notify-screen-modification-suppress
        (elscreen-save-screen-excursion
         (mapc
          (lambda (screen)
            (when (funcall condition screen)
-             (throw 'found screen)))
-         screen-list)
-        nil)))))
+             (setq result (cons screen result))))
+         screen-list))
+       result))))
+
+(defun elscreen-find-screen (condition)
+  (catch 'elscreen-find-screen
+    (elscreen-find-screens `(lambda (screen)
+                              (when (funcall ,condition screen)
+                                (throw 'elscreen-find-screen screen))))))
 
 (defun elscreen-find-screen-by-buffer (buffer &optional create)
   (let* ((buffer (if (bufferp buffer) buffer (get-buffer buffer)))
@@ -655,9 +662,7 @@ when error is occurred."
                          (lambda (screen)
                            (elscreen-goto-internal screen)
                            (member buffer
-                                   (mapcar (lambda (window)
-                                             (window-buffer window))
-                                           (window-list)))))))
+                                   (mapcar 'window-buffer (window-list)))))))
     (when (and (null target-screen) create)
       (cond
        ((null buffer))
@@ -772,7 +777,7 @@ argument SCREEN is omitted, current screen is killed."
          (mapcar 'window-buffer (window-list))))
       screen)))
 
-(defun elscreen-kill-others (&optional screen force)
+(defun elscreen-kill-others (&optional screen)
   "Kill screens other than SCREEN.  If optional argument SCREEN
 is ommitted, current screen will survive."
   (interactive)

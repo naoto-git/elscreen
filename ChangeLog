@@ -1,5 +1,7 @@
 2006-08-12  Naoto Morishima  <naoto@morishima.net>
 
+        * (elscreen-find-screens): New function.
+        * (elscreen-find-screen): Rewritten with elscreen-find-screens.
         * (elscreen-get-conf-list): Remove the argument to specify frame.
           This function always affects selected-frame.
         * (elscreen-get-conf-list): Likewise.
