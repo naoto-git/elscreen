@@ -554,7 +554,7 @@ from `elscreen-frame-confs', a cons cell."
 
 (defun elscreen-get-number-of-screens ()
   "Return total number of screens."
-  (length (elscreen-get-screen-list)))
+  (length (elscreen-get-conf-list 'screen-property)))
 
 (defun elscreen-one-screen-p ()
   "Return t if there is only one screen."
@@ -566,7 +566,7 @@ from `elscreen-frame-confs', a cons cell."
 
 (defun elscreen-screen-live-p (screen)
   "Return t when SCREEN is alive."
-  (not (null (elscreen-get-window-configuration screen))))
+  (not (null (elscreen-get-screen-property screen))))
 
 (defun elscreen-copy-tree (tree)
   (if (fboundp 'copy-tree)
