@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.13 (August 12, 2006)")
+(defconst elscreen-version "1.4.3.13 (August 13, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 12, 2006
+;; Revised:  August 13, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -210,6 +210,7 @@ starts up, and opens files with new screen if needed."
     "Face for tabs other than current screen one."
     :group 'elscreen))
 
+
 ;;; Key & Menu bindings:
 
 (defvar elscreen-map (make-sparse-keymap)
@@ -305,7 +306,7 @@ starts up, and opens files with new screen if needed."
   "*Help shown by elscreen-help-mode")
 
 
-;;; Code:
+;;; Internal Functions:
 
 (defvar elscreen-frame-confs nil
   "Alist that contains the information about screen configurations.")
@@ -713,7 +714,8 @@ Default value for SEC is 3."
     (sit-for (or sec 3)))
   (message nil))
 
-;;; Create & Kill & Goto
+
+;;; User Interfaces:
 
 (defun elscreen-create ()
   "Create a new screen and switch to it."
@@ -811,10 +813,9 @@ is ommitted, current screen will survive."
   (cond
    ((eq (elscreen-get-current-screen) screen))
    ((elscreen-screen-live-p screen)
-    (when (elscreen-get-current-screen)
-      (elscreen-set-window-configuration
-       (elscreen-get-current-screen)
-       (elscreen-current-window-configuration)))
+    (elscreen-set-window-configuration
+     (elscreen-get-current-screen)
+     (elscreen-current-window-configuration))
     (elscreen-set-current-screen screen)
     (elscreen-goto-internal screen)
     (static-when (and elscreen-on-emacs (= emacs-major-version 21))
@@ -953,7 +954,7 @@ is ommitted, current screen will survive."
           (, alist))
          nil))))
 
-(defun elscreen-get-screen-to-name-alist ()
+(defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
   (elscreen-notify-screen-modification-suppress
    (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
      (elscreen-set-window-configuration (elscreen-get-current-screen)
@@ -1000,7 +1001,20 @@ is ommitted, current screen will survive."
          screen-list))
 
        (elscreen-set-screen-to-name-alist-cache screen-to-name-alist))))
-  (elscreen-get-screen-to-name-alist-cache))
+
+  ;; Arguments of truncate-length and padding are deprecated.
+  (if truncate-length
+      (let ((screen-to-name-alist
+             (copy-alist (elscreen-get-screen-to-name-alist-cache))))
+        (elscreen-message "Arguments for `elscreen-get-screen-to-name-alist' are deprecated.  Use elscreen-truncate-screen-name for each screen-name.")
+        (mapc
+         (lambda (screen-to-name)
+           (setcdr screen-to-name
+                   (elscreen-truncate-screen-name (cdr screen-to-name)
+                                                  truncate-length padding)))
+         screen-to-name-alist)
+        screen-to-name-alist)
+    (elscreen-get-screen-to-name-alist-cache)))
 
 (defun elscreen-truncate-screen-name (screen-name truncate-length &optional padding)
   (let ((truncate-length (max truncate-length 4)))

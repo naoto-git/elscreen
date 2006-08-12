@@ -1,9 +1,12 @@
+2006-08-13  Naoto Morishima  <naoto@morishima.net>
+
+        * (elscreen-get-screen-to-name-alist): Add arguments of
+          truncate-length and padding again.  These arguments are
+          deprecated and provided for backward compativility for a while.
+
+
 2006-08-12  Naoto Morishima  <naoto@morishima.net>
 
-        * (elscreen-find-screens): New function.
-        * (elscreen-find-screen): Rewritten with elscreen-find-screens.
-        * (elscreen-find-screen-by-buffer): Use get-buffer-window.
-        * (elscreen-find-and-goto-by-buffer): Likewise.
         * (elscreen-get-conf-list): Remove the argument to specify frame.
           This function always affects selected-frame.
         * (elscreen-get-conf-list): Likewise.
@@ -30,6 +33,12 @@
         * (elscreen-get-screen-list): Likewise.
         * (elscreen-screen-live-p): Likewise.
         * (elscreen-find-screen): Likewise.
+
+        * (elscreen-find-screens): New function.
+        * (elscreen-find-screen): Rewritten with elscreen-find-screens.
+
+        * (elscreen-find-screen-by-buffer): Use get-buffer-window.
+        * (elscreen-find-and-goto-by-buffer): Likewise.
 
 
 2006-08-11  Naoto Morishima  <naoto@morishima.net>
@@ -61,6 +70,7 @@
 
 
 2006-07-08  Naoto Morishima  <naoto@morishima.net>
+
         * (elscreen-make-frame-confs): Change structure of
           elscreen-frame-confs as following: 'screen-property and
           'screen-history added.  'status removed ('current-screen and
