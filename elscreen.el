@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.13 (August 13, 2006)")
+(defconst elscreen-version "1.4.3.14 (August 13, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -396,28 +396,25 @@ starts up, and opens files with new screen if needed."
   (let ((frame-conf (elscreen-get-frame-confs (selected-frame))))
     (set-alist 'frame-conf type conf-list)))
 
-(defun elscreen-set-current-screen (value)
+(defun elscreen-append-screen-to-history (screen)
   (let ((screen-history (elscreen-get-conf-list 'screen-history)))
-    (setq screen-history (cons value (delq value screen-history)))
+    (setcdr (last screen-history) (list screen))))
+
+(defun elscreen-delete-screen-from-history (screen)
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
+    (setq screen-history (delq screen screen-history))
+    (elscreen-set-conf-list 'screen-history screen-history)))
+
+(defun elscreen-set-current-screen (screen)
+  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
+    (setq screen-history (cons screen (delq screen screen-history)))
     (elscreen-set-conf-list 'screen-history screen-history)))
 
 (defun elscreen-get-current-screen ()
-  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
-    (car screen-history)))
+  (car (elscreen-get-conf-list 'screen-history)))
 
 (defun elscreen-get-previous-screen ()
-  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
-    (or (cadr screen-history)
-        (let ((screen-list (sort (elscreen-get-screen-list) '<)))
-          (if (and (eq (car screen-list) (elscreen-get-current-screen))
-                   (not (elscreen-one-screen-p)))
-              (cadr screen-list)
-            (car screen-list))))))
-
-(defun elscreen-delete-screen-from-history (value)
-  (let ((screen-history (elscreen-get-conf-list 'screen-history)))
-    (setq screen-history (delq value screen-history))
-    (elscreen-set-conf-list 'screen-history screen-history)))
+  (cadr (elscreen-get-conf-list 'screen-history)))
 
 (defun elscreen-status-label (screen &optional default)
   (let ((default (or default " "))
@@ -631,9 +628,14 @@ when error is occurred."
         (setq screen (+ screen 1)))
       (elscreen-set-window-configuration
        screen (elscreen-default-window-configuration))
+      (elscreen-append-screen-to-history screen)
       (elscreen-notify-screen-modification 'force)
       (run-hooks 'elscreen-create-hook)
       screen))))
+
+(defun elscreen-kill-internal (screen)
+  (elscreen-delete-screen-property screen)
+  (elscreen-delete-screen-from-history screen))
 
 (defun elscreen-find-screens (condition)
   (let ((screen-list (sort (elscreen-get-screen-list) '<))
@@ -659,27 +661,26 @@ when error is occurred."
 
 (defun elscreen-find-screen-by-buffer (buffer &optional create)
   (let* ((buffer (if (bufferp buffer) buffer (get-buffer buffer)))
-         (target-screen (elscreen-find-screen
-                         (lambda (screen)
-                           (elscreen-goto-internal screen)
-                           (not (null (get-buffer-window buffer)))))))
-    (when (and (null target-screen) create)
+         (screen (when buffer
+                   (elscreen-find-screen
+                    `(lambda (screen)
+                       (elscreen-goto-internal screen)
+                       (not (null (get-buffer-window ,buffer))))))))
+    (when (and buffer (null screen) create)
       (cond
-       ((null buffer))
-       ((setq target-screen (elscreen-create-internal 'noerror))
+       ((setq screen (elscreen-create-internal 'noerror))
         (save-window-excursion
-          (elscreen-goto-internal target-screen)
+          (elscreen-goto-internal screen)
           (switch-to-buffer buffer t)
           (elscreen-set-window-configuration
-           target-screen
-           (elscreen-current-window-configuration))))
+           screen (elscreen-current-window-configuration))))
        (t
-        (setq target-screen (elscreen-get-current-screen))
-        (elscreen-goto-internal target-screen)
+        (setq screen (elscreen-get-current-screen))
+        (elscreen-goto-internal screen)
         (save-selected-window
           (select-window (split-window))
           (switch-to-buffer buffer t)))))
-    target-screen))
+    screen))
 
 (defun elscreen-find-screen-by-major-mode (major-mode-or-re)
   (let ((major-mode-re (cond
@@ -724,20 +725,22 @@ Default value for SEC is 3."
     (if screen
         (elscreen-goto screen))))
 
-(defun elscreen-clone (&optional target-screen)
-  "Create a new screen with the window-configuration of TARGET-SCREEN.
-If TARGET-SCREEN is ommitted, current-screen is used."
+(defun elscreen-clone (&optional screen)
+  "Create a new screen with the window-configuration of SCREEN.
+If SCREEN is ommitted, current-screen is used."
   (interactive)
-  (let ((target-screen (or target-screen (elscreen-get-current-screen)))
-        (screen (elscreen-create-internal))
-        elscreen-window-configuration)
-    (when screen
-      (save-window-excursion
-        (elscreen-goto-internal target-screen)
-        (setq elscreen-window-configuration
-              (elscreen-current-window-configuration)))
-      (elscreen-set-window-configuration screen elscreen-window-configuration)
-      (elscreen-goto screen))))
+  (let ((screen (or screen (elscreen-get-current-screen)))
+        clone elscreen-window-configuration)
+    (cond
+     ((not (elscreen-screen-live-p screen))
+      (elscreen-message "There is no such screen, cannot clone"))
+    ((setq clone (elscreen-create-internal))
+     (save-window-excursion
+       (elscreen-goto-internal screen)
+       (setq elscreen-window-configuration
+             (elscreen-current-window-configuration)))
+     (elscreen-set-window-configuration clone elscreen-window-configuration)
+     (elscreen-goto clone)))))
 
 (defvar elscreen-kill-hook nil)
 (defun elscreen-kill (&optional screen)
@@ -754,8 +757,7 @@ ommitted, current-screen is killed."
       (elscreen-message "There is only one screen, cannot kill")
       nil)
      (t
-      (elscreen-delete-screen-property screen)
-      (elscreen-delete-screen-from-history screen)
+      (elscreen-kill-internal screen)
       (elscreen-goto-internal (elscreen-get-current-screen))
       (elscreen-notify-screen-modification 'force)
       (run-hooks 'elscreen-kill-hook)
@@ -795,8 +797,7 @@ is ommitted, current screen will survive."
        (yes-or-no-p (format "Really kill screens other than %d? " screen)))
       (setq screen-list-string (mapconcat
                                 (lambda (screen)
-                                  (elscreen-delete-screen-property screen)
-                                  (elscreen-delete-screen-from-history screen)
+                                  (elscreen-kill-internal screen)
                                   (number-to-string screen))
                                 screen-list ","))
       (unless (eq current-screen screen)
@@ -883,15 +884,19 @@ is ommitted, current screen will survive."
 (defun elscreen-swap ()
   "Interchange screens selected currently and previously."
   (interactive)
-  (let* ((current-screen (elscreen-get-current-screen))
-         (previous-screen (elscreen-get-previous-screen))
-         (current-screen-property
-          (elscreen-get-screen-property current-screen))
-         (previous-screen-property
-          (elscreen-get-screen-property previous-screen)))
-    (elscreen-set-screen-property current-screen previous-screen-property)
-    (elscreen-set-screen-property previous-screen current-screen-property)
-    (elscreen-goto-internal (elscreen-get-current-screen))))
+  (cond
+   ((elscreen-one-screen-p)
+    (elscreen-message "There is only one screen, cannot swap"))
+   (t
+    (let* ((current-screen (elscreen-get-current-screen))
+           (previous-screen (elscreen-get-previous-screen))
+           (current-screen-property
+            (elscreen-get-screen-property current-screen))
+           (previous-screen-property
+            (elscreen-get-screen-property previous-screen)))
+      (elscreen-set-screen-property current-screen previous-screen-property)
+      (elscreen-set-screen-property previous-screen current-screen-property)
+      (elscreen-goto-internal (elscreen-get-current-screen))))))
 
 (defun elscreen-screen-nickname (screen-nickname)
   "Set nickname for current screen to SCREEN-NICKNAME."

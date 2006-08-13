@@ -3,6 +3,20 @@
         * (elscreen-get-screen-to-name-alist): Add arguments of
           truncate-length and padding again.  These arguments are
           deprecated and provided for backward compativility for a while.
+        * `elscreen-frame-confs': Make screen-history always have whole
+          screens.
+        * (elscreen-append-screen-to-history): New function.
+        * (elscreen-create-internal): Call
+          elscreen-append-screen-to-history.
+        * (elscreen-get-current-screen): Simply return car of
+          screen-history.
+        * (elscreen-get-previouos-screen): Simply return cadr of
+          screen-history.
+        * (elscreen-kill-internal): New function.
+        * (elscreen-kill): Use elscreen-kill-internal.
+        * (elscreen-kill-others): Likewise.
+        * (elscreen-clone): Check if screen is alive.
+        * (elscreen-swap): Check if there are two or more screens.
 
 
 2006-08-12  Naoto Morishima  <naoto@morishima.net>
@@ -71,10 +85,10 @@
 
 2006-07-08  Naoto Morishima  <naoto@morishima.net>
 
-        * (elscreen-make-frame-confs): Change structure of
-          elscreen-frame-confs as following: 'screen-property and
-          'screen-history added.  'status removed ('current-screen and
-          'previous-screen are absorbed by 'screen-history).
+        * `elscreen-frame-confs': Change its structure as following:
+          'screen-property and 'screen-history added.  'status removed
+          ('current-screen and 'previous-screen are absorbed by
+          'screen-history).
         * (elscreen-get-status): Removed.
         * (elscreen-set-status): Ditto.
         * (elscreen-set-previous-screen): Ditto.
