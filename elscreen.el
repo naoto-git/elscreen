@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.14 (August 13, 2006)")
+(defconst elscreen-version "1.4.3.15 (August 14, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 13, 2006
+;; Revised:  August 14, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -336,6 +336,42 @@ starts up, and opens files with new screen if needed."
 (defun get-alist (key alist)
   (cdr (assoc key alist)))
 
+(defun elscreen-copy-tree (tree)
+  (if (fboundp 'copy-tree)
+      (copy-tree tree)
+    (let (clone)
+      (while (consp tree)
+        (setq clone (cons (or (and (consp (car tree))
+                                   (elscreen-copy-tree (car tree)))
+                              (car tree))
+                          clone))
+        (setq tree (cdr tree)))
+      (nconc (nreverse clone) tree))))
+
+(defmacro elscreen-save-screen-excursion (&rest body)
+  "Execute BODY, preserving ElScreen meta data.
+Return the value of the last form in BODY."
+  (` (let ((original-buffer-list (buffer-list))
+           (original-buffer-live-p nil)
+           (original-elscreen-window-configuration
+            (elscreen-current-window-configuration))
+           (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
+       (unwind-protect
+           (save-window-excursion
+             (,@ body))
+         (setq elscreen-frame-confs original-frame-confs)
+         (elscreen-apply-window-configuration
+          original-elscreen-window-configuration)
+         (mapcar
+          (lambda (buffer)
+            (when (buffer-live-p buffer)
+              (bury-buffer buffer)
+              (setq original-buffer-live-p t)))
+          original-buffer-list)
+         (when original-buffer-live-p
+           (while (not (memq (car (buffer-list)) original-buffer-list))
+             (bury-buffer (car (buffer-list)))))))))
+
 (defsubst elscreen-get-frame-confs (frame)
   (get-alist frame elscreen-frame-confs))
 
@@ -351,13 +387,13 @@ starts up, and opens files with new screen if needed."
                 (elscreen-default-window-configuration)))
         (set-alist 'elscreen-frame-confs frame
                    (list
-                    (cons 'modified-inquirer nil)
                     (cons 'screen-property
                           (list
                            (cons 0 (list
                                     (cons 'window-configuration
                                           elscreen-window-configuration)))))
                     (cons 'screen-history (list 0))
+                    (cons 'modified-inquirer nil)
                     (cons 'screen-to-name-alist-cache nil)))
         (elscreen-apply-window-configuration elscreen-window-configuration)
         (elscreen-notify-screen-modification 'force-immediately)
@@ -368,15 +404,6 @@ starts up, and opens files with new screen if needed."
   (when (eq frame (selected-frame))
     (select-frame (previous-frame))
     (elscreen-notify-screen-modification 'force-immediately)))
-
-(defun elscreen-start ()
-  (mapcar
-   (lambda (frame)
-     (elscreen-make-frame-confs frame 'keep))
-   (frame-list))
-  (let ((prefix-key elscreen-prefix-key)
-        (elscreen-prefix-key nil))
-    (elscreen-set-prefix-key prefix-key)))
 
 (static-cond
  ((boundp 'after-make-frame-functions) ;; GNU Emacs 21
@@ -395,6 +422,65 @@ starts up, and opens files with new screen if needed."
 (defsubst elscreen-set-conf-list (type conf-list)
   (let ((frame-conf (elscreen-get-frame-confs (selected-frame))))
     (set-alist 'frame-conf type conf-list)))
+
+(defun elscreen-get-screen-property (screen)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
+    (get-alist screen screen-property-list)))
+
+(defun elscreen-set-screen-property (screen property)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
+    (set-alist 'screen-property-list screen property)
+    (elscreen-set-conf-list 'screen-property screen-property-list)))
+
+(defun elscreen-delete-screen-property (screen)
+  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
+    (remove-alist 'screen-property-list screen)
+    (elscreen-set-conf-list 'screen-property screen-property-list)))
+
+(defun elscreen-get-number-of-screens ()
+  "Return total number of screens."
+  (length (elscreen-get-conf-list 'screen-property)))
+
+(defun elscreen-one-screen-p ()
+  "Return t if there is only one screen."
+  (= (elscreen-get-number-of-screens) 1))
+
+(defun elscreen-get-screen-list ()
+  "Return a list of screen numbers."
+  (mapcar 'car (elscreen-get-conf-list 'screen-property)))
+
+(defun elscreen-screen-live-p (screen)
+  "Return t when SCREEN is alive."
+  (not (null (elscreen-get-screen-property screen))))
+
+(defun elscreen-get-window-configuration (screen)
+  "Return pair of window-configuration and marker of SCREEN
+from `elscreen-frame-confs', a cons cell."
+  (let ((screen-property (elscreen-get-screen-property screen)))
+    (get-alist 'window-configuration screen-property)))
+
+(defun elscreen-set-window-configuration (screen winconf)
+  "Set pair of window-configuration and marker of SCREEN to WINCONF."
+  (let ((screen-property (elscreen-get-screen-property screen)))
+    (set-alist 'screen-property 'window-configuration winconf)
+    (elscreen-set-screen-property screen screen-property)))
+
+(defun elscreen-get-screen-nickname (screen)
+  "Return nickname of SCREEN from `elscreen-frame-confs', a string."
+  (let ((screen-property (elscreen-get-screen-property screen)))
+    (get-alist 'nickname screen-property)))
+
+(defun elscreen-set-screen-nickname (screen nickname)
+  "Set nickname of SCREEN to NICKNAME."
+  (let ((screen-property (elscreen-get-screen-property screen)))
+    (set-alist 'screen-property 'nickname nickname)
+    (elscreen-set-screen-property screen screen-property)))
+
+(defun elscreen-delete-screen-nickname (screen)
+  "Remove nickname of SCREEN from `elscreen-frame-confs'."
+  (let ((screen-property (elscreen-get-screen-property screen)))
+    (remove-alist 'screen-property 'nickname)
+    (elscreen-set-screen-property screen screen-property)))
 
 (defun elscreen-append-screen-to-history (screen)
   (let ((screen-history (elscreen-get-conf-list 'screen-history)))
@@ -500,106 +586,135 @@ starts up, and opens files with new screen if needed."
  (select-frame-hook 'force) ;; XEmacs
  (Info-find-node-2 'force))
 
-(defun elscreen-get-screen-property (screen)
-  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
-    (get-alist screen screen-property-list)))
-
-(defun elscreen-set-screen-property (screen property)
-  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
-    (set-alist 'screen-property-list screen property)
-    (elscreen-set-conf-list 'screen-property screen-property-list)))
-
-(defun elscreen-delete-screen-property (screen)
-  (let ((screen-property-list (elscreen-get-conf-list 'screen-property)))
-    (remove-alist 'screen-property-list screen)
-    (elscreen-set-conf-list 'screen-property screen-property-list)))
-
-(defun elscreen-get-window-configuration (screen)
-  "Return pair of window-configuration and marker of SCREEN
-from `elscreen-frame-confs', a cons cell."
-  (let ((screen-property (elscreen-get-screen-property screen)))
-    (get-alist 'window-configuration screen-property)))
-
-(defun elscreen-set-window-configuration (screen winconf)
-  "Set pair of window-configuration and marker of SCREEN to WINCONF."
-  (let ((screen-property (elscreen-get-screen-property screen)))
-    (set-alist 'screen-property 'window-configuration winconf)
-    (elscreen-set-screen-property screen screen-property)))
-
-(defun elscreen-get-screen-nickname (screen)
-  "Return nickname of SCREEN from `elscreen-frame-confs', a string."
-  (let ((screen-property (elscreen-get-screen-property screen)))
-    (get-alist 'nickname screen-property)))
-
-(defun elscreen-set-screen-nickname (screen nickname)
-  "Set nickname of SCREEN to NICKNAME."
-  (let ((screen-property (elscreen-get-screen-property screen)))
-    (set-alist 'screen-property 'nickname nickname)
-    (elscreen-set-screen-property screen screen-property)))
-
-(defun elscreen-delete-screen-nickname (screen)
-  "Remove nickname of SCREEN from `elscreen-frame-confs'."
-  (let ((screen-property (elscreen-get-screen-property screen)))
-    (remove-alist 'screen-property 'nickname)
-    (elscreen-set-screen-property screen screen-property)))
-
 (defun elscreen-get-screen-to-name-alist-cache ()
   (elscreen-get-conf-list 'screen-to-name-alist-cache))
 
 (defun elscreen-set-screen-to-name-alist-cache (alist)
   (elscreen-set-conf-list 'screen-to-name-alist-cache alist))
 
-(defun elscreen-get-number-of-screens ()
-  "Return total number of screens."
-  (length (elscreen-get-conf-list 'screen-property)))
+(defvar elscreen-mode-to-nickname-alist-symbol-list nil)
+(defvar elscreen-mode-to-nickname-alist-internal nil)
+(defun elscreen-rebuild-mode-to-nickname-alist ()
+  (setq elscreen-mode-to-nickname-alist-internal
+        (apply 'append
+               (mapcar 'symbol-value
+                       elscreen-mode-to-nickname-alist-symbol-list)))
+  (elscreen-notify-screen-modification 'force-immediately))
+(defun elscreen-set-mode-to-nickname-alist (mode-to-nickname-alist-symbol)
+  (add-to-list 'elscreen-mode-to-nickname-alist-symbol-list
+               mode-to-nickname-alist-symbol)
+  (elscreen-rebuild-mode-to-nickname-alist))
+(elscreen-set-mode-to-nickname-alist 'elscreen-mode-to-nickname-alist)
 
-(defun elscreen-one-screen-p ()
-  "Return t if there is only one screen."
-  (= (elscreen-get-number-of-screens) 1))
+(defvar elscreen-buffer-to-nickname-alist-symbol-list nil)
+(defvar elscreen-buffer-to-nickname-alist-internal nil)
+(defun elscreen-rebuild-buffer-to-nickname-alist ()
+  (setq elscreen-buffer-to-nickname-alist-internal
+        (apply 'append
+               (mapcar 'symbol-value
+                       elscreen-buffer-to-nickname-alist-symbol-list)))
+  (elscreen-notify-screen-modification 'force-immediately))
+(defun elscreen-set-buffer-to-nickname-alist (buffer-to-nickname-alist-symbol)
+  (add-to-list 'elscreen-buffer-to-nickname-alist-symbol-list
+               buffer-to-nickname-alist-symbol)
+  (elscreen-rebuild-buffer-to-nickname-alist))
+(elscreen-set-buffer-to-nickname-alist 'elscreen-buffer-to-nickname-alist)
 
-(defun elscreen-get-screen-list ()
-  "Return a list of screen numbers."
-  (mapcar 'car (elscreen-get-conf-list 'screen-property)))
-
-(defun elscreen-screen-live-p (screen)
-  "Return t when SCREEN is alive."
-  (not (null (elscreen-get-screen-property screen))))
-
-(defun elscreen-copy-tree (tree)
-  (if (fboundp 'copy-tree)
-      (copy-tree tree)
-    (let (clone)
-      (while (consp tree)
-        (setq clone (cons (or (and (consp (car tree))
-                                   (elscreen-copy-tree (car tree)))
-                              (car tree))
-                          clone))
-        (setq tree (cdr tree)))
-      (nconc (nreverse clone) tree))))
-
-(defmacro elscreen-save-screen-excursion (&rest body)
-  "Execute BODY, preserving ElScreen meta data.
-Return the value of the last form in BODY."
-  (` (let ((original-buffer-list (buffer-list))
-           (original-buffer-live-p nil)
-           (original-elscreen-window-configuration
-            (elscreen-current-window-configuration))
-           (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
-       (unwind-protect
-           (save-window-excursion
-             (,@ body))
-         (setq elscreen-frame-confs original-frame-confs)
-         (elscreen-apply-window-configuration
-          original-elscreen-window-configuration)
+(defmacro elscreen-get-alist-to-nickname (alist op mode-or-buffer-name)
+  ( `(catch '(, alist)
+       (progn
          (mapcar
-          (lambda (buffer)
-            (when (buffer-live-p buffer)
-              (bury-buffer buffer)
-              (setq original-buffer-live-p t)))
-          original-buffer-list)
-         (when original-buffer-live-p
-           (while (not (memq (car (buffer-list)) original-buffer-list))
-             (bury-buffer (car (buffer-list)))))))))
+          (lambda (map)
+            (let ((nickname nil)
+                  (condition-data (car map))
+                  (string-or-function (cdr map)))
+              (when ((, op) condition-data (, mode-or-buffer-name))
+                (cond
+                 ((functionp string-or-function)
+                  (setq nickname
+                        (condition-case nil
+                            (funcall string-or-function)
+                          (wrong-number-of-arguments
+                           (funcall string-or-function (current-buffer))))))
+                 (t
+                  (setq nickname string-or-function)))
+                (throw '(, alist) (cons 'nickname nickname)))))
+          (, alist))
+         nil))))
+
+(defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
+  (elscreen-notify-screen-modification-suppress
+   (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
+     (elscreen-set-window-configuration (elscreen-get-current-screen)
+                                        (elscreen-current-window-configuration))
+     (let* ((screen-list (sort (elscreen-get-screen-list) '<))
+            screen-name screen-to-name-alist nickname-type-map)
+       (elscreen-save-screen-excursion
+        (mapcar
+         (lambda (screen)
+           ;; If nickname exists, use it.
+           (setq screen-name (elscreen-get-screen-nickname screen))
+           ;; Nickname does not exist, so examine major-mode and buffer-name.
+           (when (null screen-name)
+             (elscreen-goto-internal screen)
+
+             (let* ((start-window (selected-window))
+                    (window start-window))
+               (while window
+                 (with-current-buffer (window-buffer window)
+                   (setq nickname-type-map
+                         (cons (or (elscreen-get-alist-to-nickname
+                                    elscreen-mode-to-nickname-alist-internal
+                                    string-match (symbol-name major-mode))
+                                   (elscreen-get-alist-to-nickname
+                                    elscreen-buffer-to-nickname-alist-internal
+                                    string-match (buffer-name))
+                                   (cons 'buffer-name (buffer-name)))
+                               nickname-type-map))
+                   (setq window (when (not (eq (next-window window)
+                                               start-window))
+                                  (next-window window))))))
+
+             (let (nickname-list)
+               (while (> (length nickname-type-map) 0)
+                 (setq nickname-list (cons (cdar nickname-type-map)
+                                           nickname-list))
+                 (if (eq (caar nickname-type-map) 'nickname)
+                     (setq nickname-type-map
+                           (delete (car nickname-type-map) nickname-type-map))
+                   (setq nickname-type-map (cdr nickname-type-map))))
+               (setq screen-name (mapconcat (lambda (v) v) nickname-list ":"))))
+
+           (set-alist 'screen-to-name-alist screen screen-name))
+         screen-list))
+
+       (elscreen-set-screen-to-name-alist-cache screen-to-name-alist))))
+
+  ;; Arguments of truncate-length and padding are deprecated.
+  (if truncate-length
+      (let ((screen-to-name-alist
+             (copy-alist (elscreen-get-screen-to-name-alist-cache))))
+        (elscreen-message "Arguments for `elscreen-get-screen-to-name-alist' are deprecated.  Use elscreen-truncate-screen-name for each screen-name.")
+        (mapc
+         (lambda (screen-to-name)
+           (setcdr screen-to-name
+                   (elscreen-truncate-screen-name (cdr screen-to-name)
+                                                  truncate-length padding)))
+         screen-to-name-alist)
+        screen-to-name-alist)
+    (elscreen-get-screen-to-name-alist-cache)))
+
+(defun elscreen-truncate-screen-name (screen-name truncate-length &optional padding)
+  (let ((truncate-length (max truncate-length 4)))
+    (cond
+     ((> (string-width screen-name) truncate-length)
+      (concat (truncate-string-to-width screen-name (- truncate-length 3)
+                                        nil ?.)
+              "..."))
+     (padding
+      (truncate-string-to-width screen-name truncate-length nil ?\ ))
+     (t
+      screen-name))))
 
 (defun elscreen-goto-internal (screen)
   "Set the configuration of windows, buffers and markers previousuly
@@ -898,140 +1013,15 @@ is ommitted, current screen will survive."
       (elscreen-set-screen-property previous-screen current-screen-property)
       (elscreen-goto-internal (elscreen-get-current-screen))))))
 
-(defun elscreen-screen-nickname (screen-nickname)
-  "Set nickname for current screen to SCREEN-NICKNAME."
+(defun elscreen-screen-nickname (nickname)
+  "Set nickname for current screen to NICKNAME."
   (interactive "sSet window title to: ")
   (cond
-   ((zerop (length screen-nickname))
+   ((zerop (length nickname))
     (elscreen-delete-screen-nickname (elscreen-get-current-screen)))
    (t
-    (elscreen-set-screen-nickname (elscreen-get-current-screen)
-                                  screen-nickname)))
+    (elscreen-set-screen-nickname (elscreen-get-current-screen) nickname)))
   (elscreen-notify-screen-modification 'force))
-
-(defvar elscreen-mode-to-nickname-alist-symbol-list nil)
-(defvar elscreen-mode-to-nickname-alist-internal nil)
-(defun elscreen-rebuild-mode-to-nickname-alist ()
-  (setq elscreen-mode-to-nickname-alist-internal
-        (apply 'append
-               (mapcar 'symbol-value
-                       elscreen-mode-to-nickname-alist-symbol-list)))
-  (elscreen-notify-screen-modification 'force-immediately))
-(defun elscreen-set-mode-to-nickname-alist (mode-to-nickname-alist-symbol)
-  (add-to-list 'elscreen-mode-to-nickname-alist-symbol-list
-               mode-to-nickname-alist-symbol)
-  (elscreen-rebuild-mode-to-nickname-alist))
-(elscreen-set-mode-to-nickname-alist 'elscreen-mode-to-nickname-alist)
-
-(defvar elscreen-buffer-to-nickname-alist-symbol-list nil)
-(defvar elscreen-buffer-to-nickname-alist-internal nil)
-(defun elscreen-rebuild-buffer-to-nickname-alist ()
-  (setq elscreen-buffer-to-nickname-alist-internal
-        (apply 'append
-               (mapcar 'symbol-value
-                       elscreen-buffer-to-nickname-alist-symbol-list)))
-  (elscreen-notify-screen-modification 'force-immediately))
-(defun elscreen-set-buffer-to-nickname-alist (buffer-to-nickname-alist-symbol)
-  (add-to-list 'elscreen-buffer-to-nickname-alist-symbol-list
-               buffer-to-nickname-alist-symbol)
-  (elscreen-rebuild-buffer-to-nickname-alist))
-(elscreen-set-buffer-to-nickname-alist 'elscreen-buffer-to-nickname-alist)
-
-(defmacro elscreen-get-alist-to-nickname (alist op mode-or-buffer-name)
-  ( `(catch '(, alist)
-       (progn
-         (mapcar
-          (lambda (map)
-            (let ((nickname nil)
-                  (condition-data (car map))
-                  (string-or-function (cdr map)))
-              (when ((, op) condition-data (, mode-or-buffer-name))
-                (cond
-                 ((functionp string-or-function)
-                  (setq nickname
-                        (condition-case nil
-                            (funcall string-or-function)
-                          (wrong-number-of-arguments
-                           (funcall string-or-function (current-buffer))))))
-                 (t
-                  (setq nickname string-or-function)))
-                (throw '(, alist) (cons 'nickname nickname)))))
-          (, alist))
-         nil))))
-
-(defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
-  (elscreen-notify-screen-modification-suppress
-   (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
-     (elscreen-set-window-configuration (elscreen-get-current-screen)
-                                        (elscreen-current-window-configuration))
-     (let* ((screen-list (sort (elscreen-get-screen-list) '<))
-            screen-name screen-to-name-alist nickname-type-map)
-       (elscreen-save-screen-excursion
-        (mapcar
-         (lambda (screen)
-           ;; If nickname exists, use it.
-           (setq screen-name (elscreen-get-screen-nickname screen))
-           ;; Nickname does not exist, so examine major-mode and buffer-name.
-           (when (null screen-name)
-             (elscreen-goto-internal screen)
-
-             (let* ((start-window (selected-window))
-                    (window start-window))
-               (while window
-                 (with-current-buffer (window-buffer window)
-                   (setq nickname-type-map
-                         (cons (or (elscreen-get-alist-to-nickname
-                                    elscreen-mode-to-nickname-alist-internal
-                                    string-match (symbol-name major-mode))
-                                   (elscreen-get-alist-to-nickname
-                                    elscreen-buffer-to-nickname-alist-internal
-                                    string-match (buffer-name))
-                                   (cons 'buffer-name (buffer-name)))
-                               nickname-type-map))
-                   (setq window (when (not (eq (next-window window)
-                                               start-window))
-                                  (next-window window))))))
-
-             (let (nickname-list)
-               (while (> (length nickname-type-map) 0)
-                 (setq nickname-list (cons (cdar nickname-type-map)
-                                           nickname-list))
-                 (if (eq (caar nickname-type-map) 'nickname)
-                     (setq nickname-type-map
-                           (delete (car nickname-type-map) nickname-type-map))
-                   (setq nickname-type-map (cdr nickname-type-map))))
-               (setq screen-name (mapconcat (lambda (v) v) nickname-list ":"))))
-
-           (set-alist 'screen-to-name-alist screen screen-name))
-         screen-list))
-
-       (elscreen-set-screen-to-name-alist-cache screen-to-name-alist))))
-
-  ;; Arguments of truncate-length and padding are deprecated.
-  (if truncate-length
-      (let ((screen-to-name-alist
-             (copy-alist (elscreen-get-screen-to-name-alist-cache))))
-        (elscreen-message "Arguments for `elscreen-get-screen-to-name-alist' are deprecated.  Use elscreen-truncate-screen-name for each screen-name.")
-        (mapc
-         (lambda (screen-to-name)
-           (setcdr screen-to-name
-                   (elscreen-truncate-screen-name (cdr screen-to-name)
-                                                  truncate-length padding)))
-         screen-to-name-alist)
-        screen-to-name-alist)
-    (elscreen-get-screen-to-name-alist-cache)))
-
-(defun elscreen-truncate-screen-name (screen-name truncate-length &optional padding)
-  (let ((truncate-length (max truncate-length 4)))
-    (cond
-     ((> (string-width screen-name) truncate-length)
-      (concat (truncate-string-to-width screen-name (- truncate-length 3)
-                                        nil ?.)
-              "..."))
-     (padding
-      (truncate-string-to-width screen-name truncate-length nil ?\ ))
-     (t
-      screen-name))))
 
 (defun elscreen-display-screen-name-list ()
   "Display the list of screens in mini-buffer."
@@ -1046,6 +1036,225 @@ is ommitted, current screen will survive."
                   (elscreen-status-label screen "")
                   screen-name)))
       screen-list "  "))))
+
+
+;;; Help
+
+(defvar elscreen-help-symbol-list nil)
+(defun elscreen-set-help (help-symbol)
+  (add-to-list 'elscreen-help-symbol-list help-symbol t))
+(elscreen-set-help 'elscreen-help)
+
+(defun elscreen-help ()
+  "Show key bindings of ElScreen and Add-On softwares."
+  (interactive)
+  (with-output-to-temp-buffer "*ElScreen Help*"
+    (princ (substitute-command-keys
+            (mapconcat 'symbol-value
+                       elscreen-help-symbol-list "\n\n")))
+    (print-help-return-message)))
+
+
+;;; Utility Functions
+
+(defun elscreen-display-version ()
+  "Display ElScreen version."
+  (interactive)
+  (elscreen-message (concat "ElScreen version " elscreen-version)))
+
+(defun elscreen-toggle-display-screen-number ()
+  "Toggle the screen number in the mode line."
+  (interactive)
+  (setq elscreen-display-screen-number (null elscreen-display-screen-number))
+  (elscreen-notify-screen-modification 'force))
+
+(defun elscreen-toggle-display-tab ()
+  "Toggle the tab on the top of screen."
+  (interactive)
+  (setq elscreen-display-tab (null elscreen-display-tab))
+  (elscreen-notify-screen-modification 'force))
+
+(defun elscreen-display-last-message ()
+  "Repeat the last message displayed in the mini-buffer."
+  (interactive)
+  (elscreen-message elscreen-last-message 5))
+
+(defun elscreen-display-time ()
+  "Show system information."
+  (interactive)
+  (elscreen-message
+   (format "%s %s / %s"
+           (current-time-string)
+           (nth 1 (current-time-zone))
+           (mapconcat
+            (lambda (load)
+              (format "%.2f" (/ load 100.0)))
+            (load-average) " "))))
+
+(defun elscreen-select-and-goto ()
+  (interactive)
+  (let* ((screen-list (sort (elscreen-get-screen-list) '<))
+         (screen-to-name-alist (elscreen-get-screen-to-name-alist))
+         (command-list '(("c" . elscreen-create)
+                         ("n" . elscreen-next)
+                         ("p" . elscreen-previous)
+                         ("t" .  elscreen-toggle)))
+         (truncate-length (- (frame-width) 6))
+         (candidate-window-height (max (+ (elscreen-get-number-of-screens) 4)
+                                       window-min-height))
+         (candidate-buffer (get-buffer-create
+                            (format " *ElScreen-select:%s*"
+                                    (prin1-to-string (selected-frame)))))
+         (candidate (concat
+                     "Current screen list: \n\n"
+                     (mapconcat
+                      (lambda (screen)
+                        (format "  %d%s %s\n" screen
+                                (elscreen-status-label screen)
+                                (elscreen-truncate-screen-name
+                                 (get-alist screen screen-to-name-alist)
+                                 truncate-length)))
+                      screen-list nil)))
+         (prompt "Select screen or (c)reate, (n)ext, (p)revious, (t)oggle: ")
+         (minibuffer-map (copy-keymap minibuffer-local-map))
+         window frame-last-window command-or-target-screen mini-hist)
+    ;; prepare window to show candidates
+    (save-window-excursion
+      (setq frame-last-window (previous-window (static-if elscreen-on-xemacs
+                                                   (frame-highest-window)
+                                                 (frame-first-window))))
+      (while (minibuffer-window-active-p frame-last-window)
+        (setq frame-last-window (previous-window frame-last-window)))
+      (while (and (not (one-window-p))
+                  (or (< (window-width frame-last-window)
+                         (frame-width))
+                      (< (window-height frame-last-window)
+                         (+ candidate-window-height window-min-height))))
+        (setq window frame-last-window)
+        (setq frame-last-window (previous-window window))
+        (delete-window window))
+      (select-window (split-window frame-last-window))
+      (shrink-window (- (window-height) candidate-window-height))
+      ;; now switch to the buffer for candidates and fill it
+      (switch-to-buffer candidate-buffer)
+      (let ((buffer-read-only nil))
+        (erase-buffer)
+        (insert candidate)
+        (goto-char (point-min))
+        (save-excursion
+          (while (not (eobp))
+            (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
+              (put-text-property
+               (match-beginning 1) (match-end 1) 'face 'bold)
+              (cond
+               ((string= (match-string 2) "+")
+                (put-text-property
+                 (match-beginning 3) (match-end 3) 'face 'bold))))
+            (forward-line 1)))
+        (setq buffer-read-only t)
+        (set-buffer-modified-p nil))
+      ;; make keymap for minibuffer
+      (suppress-keymap minibuffer-map t)
+      (define-key minibuffer-map "\C-g" 'abort-recursive-edit)
+      (define-key minibuffer-map "\C-m" 'exit-recursive-edit)
+      (define-key minibuffer-map "q" 'exit-recursive-edit)
+      (define-key minibuffer-map " " 'exit-recursive-edit)
+      (mapcar
+       (lambda (command)
+         (define-key minibuffer-map (car command) 'self-insert-and-exit))
+       command-list)
+      (mapcar
+       (lambda (screen)
+         (define-key minibuffer-map (number-to-string screen)
+           'self-insert-and-exit))
+       screen-list)
+      ;; read key from minibuffer
+      (unwind-protect
+          (setq command-or-target-screen
+                (read-from-minibuffer prompt nil minibuffer-map
+                                      nil 'mini-hist))
+        (kill-buffer candidate-buffer)))
+    (cond
+     ((string= command-or-target-screen ""))
+     ((get-alist command-or-target-screen command-list)
+      (funcall (get-alist command-or-target-screen command-list)))
+     (t
+      (elscreen-goto (string-to-number command-or-target-screen))))))
+
+(defun elscreen-find-and-goto-by-buffer (&optional buffer create noselect)
+  "Go to the screen that has the window with buffer BUFFER,
+creating one if none already exists."
+  (interactive)
+  (let* ((prompt "Go to the screen with specified buffer: ")
+         (create (or create (interactive-p)))
+         (buffer-name (or (and (bufferp buffer) (buffer-name buffer))
+                          (and (stringp buffer) buffer)
+                          (and (featurep 'iswitchb)
+                               (iswitchb-read-buffer prompt))
+                          (read-buffer prompt)))
+         (target-screen (elscreen-find-screen-by-buffer
+                         (get-buffer-create buffer-name) create)))
+    (when target-screen
+      (elscreen-goto target-screen)
+      (unless noselect
+        (select-window (get-buffer-window buffer-name))))
+    target-screen))
+
+(defun elscreen-find-file (filename)
+  "Edit file FILENAME.
+Switch to a screen visiting file FILENAME,
+creating one if none already exists."
+  (interactive "FFind file in new screen: ")
+  (elscreen-find-and-goto-by-buffer (find-file-noselect filename) 'create))
+
+(defun elscreen-find-file-read-only (filename)
+  "Edit file FILENAME with new screen but don't allow changes.
+Like \\[elscreen-find-file] but marks buffer as read-only.
+Use \\[toggle-read-only] to permit editing."
+  (interactive "FFind file read-only in new screen: ")
+  (elscreen-find-file filename)
+  (toggle-read-only 1))
+
+(defun elscreen-dired (dirname &optional switches)
+  (interactive (progn
+                 (or (featurep 'dired) (require 'dired))
+                 (dired-read-dir-and-switches "in new screen ")))
+  (elscreen-find-and-goto-by-buffer (dired-noselect dirname switches) 'create))
+
+(defun elscreen-execute-extended-command (prefix-arg)
+  (interactive "P")
+  (let ((prefix-arg prefix-arg)
+        (prefix-key (key-description elscreen-prefix-key))
+        target-screen)
+    (setq this-command (intern (completing-read
+                                ;; Note: this has the hard-wired
+                                ;;  "C-u" and "M-x" string bug in common
+                                ;;  with all Emacs's.
+                                ;; (i.e. it prints C-u and M-x regardless of
+                                ;; whether some other keys were actually bound
+                                ;; to `execute-extended-command' and
+                                ;; `universal-argument'.
+                                (cond ((eq prefix-arg '-)
+                                       (format "- %s M-x " prefix-key))
+                                      ((equal prefix-arg '(4))
+                                       (format "C-u %s M-x " prefix-key))
+                                      ((integerp prefix-arg)
+                                       (format "%d %s M-x "
+                                               prefix-arg prefix-key))
+                                      ((and (consp prefix-arg)
+                                            (integerp (car prefix-arg)))
+                                       (format "%d %s M-x "
+                                               (car prefix-arg) prefix-key))
+                                      (t
+                                       (format "%s M-x " prefix-key)))
+                                obarray 'commandp t nil
+                                (static-if elscreen-on-xemacs
+                                    'read-command-history
+                                  'extended-command-history))))
+    (if (setq target-screen (elscreen-create-internal 'noerror))
+        (elscreen-goto target-screen)
+      (select-window (split-window)))
+    (command-execute this-command t)))
 
 
 ;;; Mode Line & Menu & Tab
@@ -1415,224 +1624,6 @@ is ommitted, current screen will survive."
 
   (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update))
 
-;;; Help
-
-(defvar elscreen-help-symbol-list nil)
-(defun elscreen-set-help (help-symbol)
-  (add-to-list 'elscreen-help-symbol-list help-symbol t))
-(elscreen-set-help 'elscreen-help)
-
-(defun elscreen-help ()
-  "Show key bindings of ElScreen and Add-On softwares."
-  (interactive)
-  (with-output-to-temp-buffer "*ElScreen Help*"
-    (princ (substitute-command-keys
-            (mapconcat 'symbol-value
-                       elscreen-help-symbol-list "\n\n")))
-    (print-help-return-message)))
-
-;;; Utility Functions
-
-(defun elscreen-display-version ()
-  "Display ElScreen version."
-  (interactive)
-  (elscreen-message (concat "ElScreen version " elscreen-version)))
-
-(defun elscreen-toggle-display-screen-number ()
-  "Toggle the screen number in the mode line."
-  (interactive)
-  (setq elscreen-display-screen-number (null elscreen-display-screen-number))
-  (elscreen-notify-screen-modification 'force))
-
-(defun elscreen-toggle-display-tab ()
-  "Toggle the tab on the top of screen."
-  (interactive)
-  (setq elscreen-display-tab (null elscreen-display-tab))
-  (elscreen-notify-screen-modification 'force))
-
-(defun elscreen-display-last-message ()
-  "Repeat the last message displayed in the mini-buffer."
-  (interactive)
-  (elscreen-message elscreen-last-message 5))
-
-(defun elscreen-display-time ()
-  "Show system information."
-  (interactive)
-  (elscreen-message
-   (format "%s %s / %s"
-           (current-time-string)
-           (nth 1 (current-time-zone))
-           (mapconcat
-            (lambda (load)
-              (format "%.2f" (/ load 100.0)))
-            (load-average) " "))
-   3))
-
-(defun elscreen-select-and-goto ()
-  (interactive)
-  (let* ((screen-list (sort (elscreen-get-screen-list) '<))
-         (screen-to-name-alist (elscreen-get-screen-to-name-alist))
-         (command-list '(("c" . elscreen-create)
-                         ("n" . elscreen-next)
-                         ("p" . elscreen-previous)
-                         ("t" .  elscreen-toggle)))
-         (truncate-length (- (frame-width) 6))
-         (candidate-window-height (max (+ (elscreen-get-number-of-screens) 4)
-                                       window-min-height))
-         (candidate-buffer (get-buffer-create
-                            (format " *ElScreen-select:%s*"
-                                    (prin1-to-string (selected-frame)))))
-         (candidate (concat
-                     "Current screen list: \n\n"
-                     (mapconcat
-                      (lambda (screen)
-                        (format "  %d%s %s\n" screen
-                                (elscreen-status-label screen)
-                                (elscreen-truncate-screen-name
-                                 (get-alist screen screen-to-name-alist)
-                                 truncate-length)))
-                      screen-list nil)))
-         (prompt "Select screen or (c)reate, (n)ext, (p)revious, (t)oggle: ")
-         (minibuffer-map (copy-keymap minibuffer-local-map))
-         window frame-last-window command-or-target-screen mini-hist)
-    ;; prepare window to show candidates
-    (save-window-excursion
-      (setq frame-last-window (previous-window (static-if elscreen-on-xemacs
-                                                   (frame-highest-window)
-                                                 (frame-first-window))))
-      (while (minibuffer-window-active-p frame-last-window)
-        (setq frame-last-window (previous-window frame-last-window)))
-      (while (and (not (one-window-p))
-                  (or (< (window-width frame-last-window)
-                         (frame-width))
-                      (< (window-height frame-last-window)
-                         (+ candidate-window-height window-min-height))))
-        (setq window frame-last-window)
-        (setq frame-last-window (previous-window window))
-        (delete-window window))
-      (select-window (split-window frame-last-window))
-      (shrink-window (- (window-height) candidate-window-height))
-      ;; now switch to the buffer for candidates and fill it
-      (switch-to-buffer candidate-buffer)
-      (let ((buffer-read-only nil))
-        (erase-buffer)
-        (insert candidate)
-        (goto-char (point-min))
-        (save-excursion
-          (while (not (eobp))
-            (when (looking-at "^  \\([0-9]\\)\\(.\\) \\(.*\\)$")
-              (put-text-property
-               (match-beginning 1) (match-end 1) 'face 'bold)
-              (cond
-               ((string= (match-string 2) "+")
-                (put-text-property
-                 (match-beginning 3) (match-end 3) 'face 'bold))))
-            (forward-line 1)))
-        (setq buffer-read-only t)
-        (set-buffer-modified-p nil))
-      ;; make keymap for minibuffer
-      (suppress-keymap minibuffer-map t)
-      (define-key minibuffer-map "\C-g" 'abort-recursive-edit)
-      (define-key minibuffer-map "\C-m" 'exit-recursive-edit)
-      (define-key minibuffer-map "q" 'exit-recursive-edit)
-      (define-key minibuffer-map " " 'exit-recursive-edit)
-      (mapcar
-       (lambda (command)
-         (define-key minibuffer-map (car command) 'self-insert-and-exit))
-       command-list)
-      (mapcar
-       (lambda (screen)
-         (define-key minibuffer-map (number-to-string screen)
-           'self-insert-and-exit))
-       screen-list)
-      ;; read key from minibuffer
-      (unwind-protect
-          (setq command-or-target-screen
-                (read-from-minibuffer prompt nil minibuffer-map
-                                      nil 'mini-hist))
-        (kill-buffer candidate-buffer)))
-    (cond
-     ((string= command-or-target-screen ""))
-     ((get-alist command-or-target-screen command-list)
-      (funcall (get-alist command-or-target-screen command-list)))
-     (t
-      (elscreen-goto (string-to-number command-or-target-screen))))))
-
-(defun elscreen-find-and-goto-by-buffer (&optional buffer create noselect)
-  "Go to the screen that has the window with buffer BUFFER,
-creating one if none already exists."
-  (interactive)
-  (let* ((prompt "Go to the screen with specified buffer: ")
-         (create (or create (interactive-p)))
-         (buffer-name (or (and (bufferp buffer) (buffer-name buffer))
-                          (and (stringp buffer) buffer)
-                          (and (featurep 'iswitchb)
-                               (iswitchb-read-buffer prompt))
-                          (read-buffer prompt)))
-         (target-screen (elscreen-find-screen-by-buffer
-                         (get-buffer-create buffer-name) create)))
-    (when target-screen
-      (elscreen-goto target-screen)
-      (unless noselect
-        (select-window (get-buffer-window buffer-name))))
-    target-screen))
-
-(defun elscreen-find-file (filename)
-  "Edit file FILENAME.
-Switch to a screen visiting file FILENAME,
-creating one if none already exists."
-  (interactive "FFind file in new screen: ")
-  (elscreen-find-and-goto-by-buffer (find-file-noselect filename) 'create))
-
-(defun elscreen-find-file-read-only (filename)
-  "Edit file FILENAME with new screen but don't allow changes.
-Like \\[elscreen-find-file] but marks buffer as read-only.
-Use \\[toggle-read-only] to permit editing."
-  (interactive "FFind file read-only in new screen: ")
-  (elscreen-find-file filename)
-  (toggle-read-only 1))
-
-(defun elscreen-dired (dirname &optional switches)
-  (interactive (progn
-                 (or (featurep 'dired) (require 'dired))
-                 (dired-read-dir-and-switches "in new screen ")))
-  (elscreen-find-and-goto-by-buffer (dired-noselect dirname switches) 'create))
-
-(defun elscreen-execute-extended-command (prefix-arg)
-  (interactive "P")
-  (let ((prefix-arg prefix-arg)
-        (prefix-key (key-description elscreen-prefix-key))
-        target-screen)
-    (setq this-command (intern (completing-read
-                                ;; Note: this has the hard-wired
-                                ;;  "C-u" and "M-x" string bug in common
-                                ;;  with all Emacs's.
-                                ;; (i.e. it prints C-u and M-x regardless of
-                                ;; whether some other keys were actually bound
-                                ;; to `execute-extended-command' and
-                                ;; `universal-argument'.
-                                (cond ((eq prefix-arg '-)
-                                       (format "- %s M-x " prefix-key))
-                                      ((equal prefix-arg '(4))
-                                       (format "C-u %s M-x " prefix-key))
-                                      ((integerp prefix-arg)
-                                       (format "%d %s M-x "
-                                               prefix-arg prefix-key))
-                                      ((and (consp prefix-arg)
-                                            (integerp (car prefix-arg)))
-                                       (format "%d %s M-x "
-                                               (car prefix-arg) prefix-key))
-                                      (t
-                                       (format "%s M-x " prefix-key)))
-                                obarray 'commandp t nil
-                                (static-if elscreen-on-xemacs
-                                    'read-command-history
-                                  'extended-command-history))))
-    (if (setq target-screen (elscreen-create-internal 'noerror))
-        (elscreen-goto target-screen)
-      (select-window (split-window)))
-    (command-execute this-command t)))
-
 ;;; Command-line processing at startup time
 
 (defun elscreen-command-line-funcall (switch-string)
@@ -1761,5 +1752,14 @@ Use \\[toggle-read-only] to permit editing."
     (elscreen-message "cannot split screen!")))
 
 ;;; Start ElScreen!
+
+(defun elscreen-start ()
+  (mapcar
+   (lambda (frame)
+     (elscreen-make-frame-confs frame 'keep))
+   (frame-list))
+  (let ((prefix-key elscreen-prefix-key)
+        (elscreen-prefix-key nil))
+    (elscreen-set-prefix-key prefix-key)))
 
 (elscreen-start)
