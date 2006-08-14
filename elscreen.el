@@ -210,6 +210,14 @@ starts up, and opens files with new screen if needed."
     "Face for tabs other than current screen one."
     :group 'elscreen))
 
+(defcustom elscreen-init-hook nil
+  "A hook called when the initialization of ElScreen is finished.
+Although this is a customizable variable,
+ElScreen also may use this variable internally."
+  :tag "A hook called when the initialization of ElScreen is finished."
+  :type 'hook
+  :group 'elscreen)
+
 
 ;;; Key & Menu bindings:
 
@@ -405,17 +413,6 @@ Return the value of the last form in BODY."
     (select-frame (previous-frame))
     (elscreen-notify-screen-modification 'force-immediately)))
 
-(static-cond
- ((boundp 'after-make-frame-functions) ;; GNU Emacs 21
-  (add-hook 'after-make-frame-functions 'elscreen-make-frame-confs))
- (t ;; XEmacs
-  (add-hook 'create-frame-hook 'elscreen-make-frame-confs)))
-(static-cond
- ((boundp 'delete-frame-functions) ;; GNU Emacs 22?
-  (add-hook 'delete-frame-functions 'elscreen-delete-frame-confs))
- (t ;; XEmacs
-  (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)))
-
 (defsubst elscreen-get-conf-list (type)
   (get-alist type (elscreen-get-frame-confs (selected-frame))))
 
@@ -577,14 +574,6 @@ from `elscreen-frame-confs', a cons cell."
                ad-do-it
                (elscreen-notify-screen-modification (, mode))))))))
     hooks-and-functions)))
-
-(elscreen-screen-modified-hook-setup
- (recenter 'force) (change-major-mode-hook 'force)
- other-window
- window-configuration-change-hook window-size-change-functions
- (handle-switch-frame 'force) ;; GNU Emacs 21
- (select-frame-hook 'force) ;; XEmacs
- (Info-find-node-2 'force))
 
 (defun elscreen-get-screen-to-name-alist-cache ()
   (elscreen-get-conf-list 'screen-to-name-alist-cache))
@@ -1269,22 +1258,22 @@ Use \\[toggle-read-only] to permit editing."
             (format "[%d]" (elscreen-get-current-screen)))
       (force-mode-line-update)))
 
-  (let ((point (or
-                ;; GNU Emacs 21.3.50 or later
-                (memq 'mode-line-position mode-line-format)
-                ;; GNU Emacs 21.3.1
-                (memq 'mode-line-buffer-identification mode-line-format)))
-        (elscreen-mode-line-elm '(elscreen-display-screen-number
-                                  (" " elscreen-e21-mode-line-string))))
-    (when (null (member elscreen-mode-line-elm mode-line-format))
-      (setcdr point (cons elscreen-mode-line-elm (cdr point)))))
-
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-mode-line-update)
 
-  ;; Menu
-  (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
-    (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer)
+  (defun elscreen-e21-mode-line-initialize ()
+    (let ((point (or
+                  ;; GNU Emacs 21.3.50 or later
+                  (memq 'mode-line-position mode-line-format)
+                  ;; GNU Emacs 21.3.1
+                  (memq 'mode-line-buffer-identification mode-line-format)))
+          (elscreen-mode-line-elm '(elscreen-display-screen-number
+                                    (" " elscreen-e21-mode-line-string))))
+      (when (null (member elscreen-mode-line-elm mode-line-format))
+        (setcdr point (cons elscreen-mode-line-elm (cdr point))))))
 
+  (add-hook 'elscreen-init-hook 'elscreen-e21-mode-line-initialize)
+
+  ;; Menu
   (defvar elscreen-e21-menu-bar-command-entries
     (list (list 'elscreen-command-separator
                 'menu-item
@@ -1374,6 +1363,12 @@ Use \\[toggle-read-only] to permit editing."
           (cons (copy-sequence "ElScreen") elscreen-menu)))))
 
   (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
+
+  (defun elscreen-e21-menu-bar-initialize ()
+    (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
+      (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer))
+
+  (add-hook 'elscreen-init-hook 'elscreen-e21-menu-bar-initialize)
 
   ;; Tab
   (defvar elscreen-e21-tab-format nil)
@@ -1514,46 +1509,18 @@ Use \\[toggle-read-only] to permit editing."
             (format "[%d]" (elscreen-get-current-screen)))
       (force-mode-line-update)))
 
-  (let ((point (memq 'global-mode-string mode-line-format))
-        (elscreen-mode-line-elm '(elscreen-display-screen-number
-                                  (" " elscreen-xmas-mode-line-string))))
-    (if (null (member elscreen-mode-line-elm mode-line-format))
-        (setcdr point (cons elscreen-mode-line-elm (cdr point)))))
-
   (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-mode-line-update)
 
+  (defun elscreen-xmas-mode-line-initialize ()
+    (let ((point (memq 'global-mode-string mode-line-format))
+          (elscreen-mode-line-elm '(elscreen-display-screen-number
+                                    (" " elscreen-xmas-mode-line-string))))
+      (if (null (member elscreen-mode-line-elm mode-line-format))
+          (setcdr point (cons elscreen-mode-line-elm (cdr point))))))
+
+  (add-hook 'elscreen-init-hook 'elscreen-xmas-mode-line-initialize)
+
   ;; Menu
-  (defvar elscreen-xmas-menu-bar-command-entries
-    '("%_ElScreen"
-      :filter elscreen-xmas-menu-bar-filter
-      "----"
-      ["%_Create Screen" elscreen-create]
-      ["%_Clone Screen" elscreen-clone]
-      ["%_Kill Screen" elscreen-kill]
-      ["%_Kill Screen and Buffers" elscreen-kill-screen-and-buffers]
-      ["%_Kill Other Screens" elscreen-kill-others]
-      ["%_Next Screen" elscreen-next]
-      ["%_Previous Screen" elscreen-previous]
-      ["%_Toggle Screen" elscreen-toggle]
-      "----"
-      ["%_Display Screen Number" elscreen-toggle-display-screen-number
-       :style toggle :selected elscreen-display-screen-number]
-      ["%_Display Tab" elscreen-toggle-display-tab
-       :style toggle :selected elscreen-display-tab]))
-
-  (defconst elscreen-xmas-menubar (copy-sequence default-menubar))
-  (let ((menubar elscreen-xmas-menubar))
-    (catch 'buffers-menu-search
-      (while (car menubar)
-        (when (equal (car (car menubar)) "%_Buffers")
-          (throw 'buffers-menu-search menubar))
-        (setq menubar (cdr menubar))))
-    (setcdr menubar
-            (cons elscreen-xmas-menu-bar-command-entries (cdr menubar))))
-
-  (set-menubar elscreen-xmas-menubar)
-  (set-menubar-dirty-flag)
-
   (defun elscreen-xmas-menu-bar-filter (menu)
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
           (screen-to-name-alist (elscreen-get-screen-to-name-alist))
@@ -1573,19 +1540,42 @@ Use \\[toggle-read-only] to permit editing."
              screen-list))
       (append elscreen-menu menu)))
 
+  (defconst elscreen-xmas-menu-bar (copy-sequence default-menubar))
+  (defconst elscreen-xmas-menu-bar-command-entries
+    '("%_ElScreen"
+      :filter elscreen-xmas-menu-bar-filter
+      "----"
+      ["%_Create Screen" elscreen-create]
+      ["%_Clone Screen" elscreen-clone]
+      ["%_Kill Screen" elscreen-kill]
+      ["%_Kill Screen and Buffers" elscreen-kill-screen-and-buffers]
+      ["%_Kill Other Screens" elscreen-kill-others]
+      ["%_Next Screen" elscreen-next]
+      ["%_Previous Screen" elscreen-previous]
+      ["%_Toggle Screen" elscreen-toggle]
+      "----"
+      ["%_Display Screen Number" elscreen-toggle-display-screen-number
+       :style toggle :selected elscreen-display-screen-number]
+      ["%_Display Tab" elscreen-toggle-display-tab
+       :style toggle :selected elscreen-display-tab]))
+
+  (defun elscreen-xmas-menu-bar-initialize ()
+    (let ((menu-bar elscreen-xmas-menu-bar))
+      (catch 'buffers-menu-search
+        (while (car menu-bar)
+          (when (equal (car (car menu-bar)) "%_Buffers")
+            (throw 'buffers-menu-search menu-bar))
+          (setq menu-bar (cdr menu-bar))))
+      (setcdr menu-bar
+              (cons elscreen-xmas-menu-bar-command-entries (cdr menu-bar))))
+
+    (set-menubar elscreen-xmas-menu-bar)
+    (set-menubar-dirty-flag))
+
+  (add-hook 'elscreen-init-hook 'elscreen-xmas-menu-bar-initialize)
+
   ;; Tab
   (defvar elscreen-xmas-tab-glyph (make-glyph))
-  (let* ((gutter-string (copy-sequence "\n"))
-         (gutter-elscreen-tab-extent (make-extent 0 1 gutter-string)))
-    (set-extent-begin-glyph gutter-elscreen-tab-extent elscreen-xmas-tab-glyph)
-    (mapcar
-     (lambda (console-type)
-       (when (valid-image-instantiator-format-p 'tab-control console-type)
-         (set-specifier top-gutter-border-width 0 'global console-type)
-         (set-gutter-element top-gutter 'elscreen-tab
-                             gutter-string 'global console-type)))
-     (console-type-list)))
-
   (defun elscreen-xmas-tab-update (&optional force)
     (if (or (not elscreen-display-tab)
             (window-dedicated-p (selected-window)))
@@ -1622,7 +1612,22 @@ Use \\[toggle-read-only] to permit editing."
              (selected-frame)))
           (set-gutter-dirty-p 'top)))))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update))
+  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update)
+
+  (defun elscreen-xmas-tab-initialize ()
+    (let* ((gutter-string (copy-sequence "\n"))
+           (gutter-elscreen-tab-extent (make-extent 0 1 gutter-string)))
+      (set-extent-begin-glyph gutter-elscreen-tab-extent
+                              elscreen-xmas-tab-glyph)
+      (mapcar
+       (lambda (console-type)
+         (when (valid-image-instantiator-format-p 'tab-control console-type)
+           (set-specifier top-gutter-border-width 0 'global console-type)
+           (set-gutter-element top-gutter 'elscreen-tab
+                               gutter-string 'global console-type)))
+       (console-type-list))))
+
+  (add-hook 'elscreen-init-hook 'elscreen-xmas-tab-initialize))
 
 ;;; Command-line processing at startup time
 
@@ -1644,7 +1649,7 @@ Use \\[toggle-read-only] to permit editing."
       (elscreen-apply-window-configuration elscreen-window-configuration))
      ((setq screen (elscreen-create-internal 'noerror))
       (elscreen-set-window-configuration screen
-                                           elscreen-window-configuration)))))
+                                         elscreen-window-configuration)))))
 
 (defun elscreen-command-line-find-file (file file-count &optional line column)
   (let ((line (or line 0))
@@ -1662,10 +1667,15 @@ Use \\[toggle-read-only] to permit editing."
       (move-to-column (1- column)))))
 
 (when elscreen-startup-command-line-processing
-  (setq command-switch-alist
-        (append command-switch-alist
-                '(("-elscreen-funcall" . elscreen-command-line-funcall)
-                  ("-e"                . elscreen-command-line-funcall))))
+  (defvar elscreen-command-line-init-hook nil)
+  (defun elscreen-command-line-initialize ()
+    (setq command-switch-alist
+          (append command-switch-alist
+                  '(("-elscreen-funcall" . elscreen-command-line-funcall)
+                    ("-e"                . elscreen-command-line-funcall))))
+    (run-hooks 'elscreen-command-line-init-hook))
+
+  (add-hook 'elscreen-init-hook 'elscreen-command-line-initialize)
 
   (static-when elscreen-on-emacs
     (defun elscreen-e21-command-line ()
@@ -1682,9 +1692,13 @@ Use \\[toggle-read-only] to permit editing."
       (setq column 0)
       t)
 
-    (add-hook 'after-init-hook (lambda ()
-                                 (add-to-list 'command-line-functions
-                                              'elscreen-e21-command-line t))))
+    (defun elscreen-e21-command-line-initialize ()
+      (add-hook 'after-init-hook (lambda ()
+                                   (add-to-list 'command-line-functions
+                                                'elscreen-e21-command-line t))))
+
+    (add-hook 'elscreen-command-line-init-hook
+              'elscreen-e21-command-line-initialize))
 
   (static-when elscreen-on-xemacs
     (defadvice command-line-1 (around elscreen-xmas-command-line-1 activate)
@@ -1754,10 +1768,37 @@ Use \\[toggle-read-only] to permit editing."
 ;;; Start ElScreen!
 
 (defun elscreen-start ()
+  ;; Prepare meta data for each frame.
   (mapcar
    (lambda (frame)
      (elscreen-make-frame-confs frame 'keep))
    (frame-list))
+
+  ;; Prepare hooks to make/delete meta data when a frame is made/deleted.
+  (static-cond
+   ((boundp 'after-make-frame-functions) ;; GNU Emacs 21
+    (add-hook 'after-make-frame-functions 'elscreen-make-frame-confs))
+   (t ;; XEmacs
+    (add-hook 'create-frame-hook 'elscreen-make-frame-confs)))
+  (static-cond
+   ((boundp 'delete-frame-functions) ;; GNU Emacs 22?
+    (add-hook 'delete-frame-functions 'elscreen-delete-frame-confs))
+   (t ;; XEmacs
+    (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)))
+
+  ;; Prepare hooks to notify that screen is modified.
+  (elscreen-screen-modified-hook-setup
+   (recenter 'force) (change-major-mode-hook 'force)
+   other-window
+   window-configuration-change-hook window-size-change-functions
+   (handle-switch-frame 'force) ;; GNU Emacs 21
+   (select-frame-hook 'force) ;; XEmacs
+   (Info-find-node-2 'force))
+
+  ;; Run initialize hooks.
+  (run-hooks 'elscreen-init-hook)
+
+  ;; Setup prefix-key.
   (let ((prefix-key elscreen-prefix-key)
         (elscreen-prefix-key nil))
     (elscreen-set-prefix-key prefix-key)))

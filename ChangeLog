@@ -1,5 +1,20 @@
-2006-08-13  Naoto Morishima  <naoto@morishima.net>
+2006-08-14  Naoto Morishima  <naoto@morishima.net>
 
+        * `elscreen-init-hook': New variable.
+        * (elscreen-e21-mode-line-initialize): New function invoked via
+          elscreen-init-hook in elscreen-start when ElScreen starts.
+        * (elscreen-e21-menu-bar-initialize): Likewise.
+        * (elscreen-xmas-mode-line-initialize): Likewise.
+        * (elscreen-xmas-menu-bar-initialize): Likewise.
+        * (elscreen-xmas-tab-initialize): Likewise.
+        * (elscreen-command-line-initialize): Likewise.
+        * `elscreen-command-line-init-hook': New variable which is hook
+          invoked in elscreen-command-line-initialize.
+        * (elscreen-e21-command-line-initialize): New function invoked via
+          elscreen-command-line-init-hook.
+
+
+2006-08-13  Naoto Morishima  <naoto@morishima.net>
         * (elscreen-get-screen-to-name-alist): Add arguments of
           truncate-length and padding again.  These arguments are
           deprecated and provided for backward compativility for a while.
