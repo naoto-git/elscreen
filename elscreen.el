@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.15 (August 14, 2006)")
+(defconst elscreen-version "1.4.3.17 (November 29, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  August 14, 2006
+;; Revised:  November 29, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -222,7 +222,7 @@ ElScreen also may use this variable internally."
 ;;; Key & Menu bindings:
 
 (defvar elscreen-map (make-sparse-keymap)
-  "*Keymap for ElScreen.")
+  "Keymap for ElScreen.")
 (define-key elscreen-map "\C-c" 'elscreen-create)
 (define-key elscreen-map "c"    'elscreen-create)
 (define-key elscreen-map "C"    'elscreen-clone)
@@ -311,7 +311,7 @@ ElScreen also may use this variable internally."
   \\[elscreen-toggle-display-tab]    Show/hide the tab at the top of screen
   \\[elscreen-display-version]    Show ElScreen version
   \\[elscreen-help]    Show this help"
-  "*Help shown by elscreen-help-mode")
+  "Help shown by elscreen-help-mode")
 
 
 ;;; Internal Functions:
@@ -705,23 +705,42 @@ from `elscreen-frame-confs', a cons cell."
      (t
       screen-name))))
 
+(static-cond
+ ((fboundp 'define-error)
+  (defalias 'elscreen-define-error 'define-error))
+ (t
+  (defun elscreen-define-error (symbol doc-string &optional inherits-from)
+    (let* ((inherits-from (or inherits-from 'error))
+           (conditions (get inherits-from 'error-conditions)))
+      (unless conditions
+        (error "Not an error symbol: %s" symbol))
+      (setplist symbol
+                (list 'error-message doc-string
+                      'error-conditions (cons symbol conditions)))))))
+
+(mapc
+ (lambda (error-definition)
+   (apply 'elscreen-define-error error-definition))
+ '((elscreen-error "ElScreen error")
+   (elscreen-nonexistent-screen "Nonexistent screen" elscreen-error)
+   (elscreen-no-more-screens "No more screens" elscreen-error)
+   (elscreen-sole-screen "Sole screen" elscreen-error)))
+
 (defun elscreen-goto-internal (screen)
   "Set the configuration of windows, buffers and markers previousuly
 stored as SCREEN."
+  (unless (elscreen-screen-live-p screen)
+    (signal 'elscreen-nonexistent-screen screen))
   (let ((elscreen-window-configuration
          (elscreen-get-window-configuration screen)))
     (elscreen-apply-window-configuration elscreen-window-configuration)))
 
-(defvar elscreen-create-hook nil)
-(defun elscreen-create-internal (&optional noerror)
-  "Create a new screen.
-If NOERROR is not nil, no message is displayed in mini buffer
-when error is occurred."
+(defvar elscreen-create-hook nil) ;; XXX
+(defun elscreen-create-internal ()
+  "Create a new screen."
   (cond
    ((>= (elscreen-get-number-of-screens) 10)
-    (unless noerror
-      (elscreen-message "No more screens."))
-    nil)
+    (signal 'elscreen-no-more-screens nil))
    (t
     (let ((screen-list (sort (elscreen-get-screen-list) '<))
           (screen 0))
@@ -734,12 +753,18 @@ when error is occurred."
        screen (elscreen-default-window-configuration))
       (elscreen-append-screen-to-history screen)
       (elscreen-notify-screen-modification 'force)
-      (run-hooks 'elscreen-create-hook)
+      (run-hooks 'elscreen-create-hook) ;; XXX
       screen))))
 
 (defun elscreen-kill-internal (screen)
+  (cond
+   ((not (elscreen-screen-live-p screen))
+    (signal 'elscreen-nonexistent-screen screen))
+   ((elscreen-one-screen-p)
+    (signal 'elscreen-sole-screen screen)))
   (elscreen-delete-screen-property screen)
-  (elscreen-delete-screen-from-history screen))
+  (elscreen-delete-screen-from-history screen)
+  screen)
 
 (defun elscreen-find-screens (condition)
   (let ((screen-list (sort (elscreen-get-screen-list) '<))
@@ -771,19 +796,18 @@ when error is occurred."
                        (elscreen-goto-internal screen)
                        (not (null (get-buffer-window ,buffer))))))))
     (when (and buffer (null screen) create)
-      (cond
-       ((setq screen (elscreen-create-internal 'noerror))
-        (save-window-excursion
-          (elscreen-goto-internal screen)
-          (switch-to-buffer buffer t)
-          (elscreen-set-window-configuration
-           screen (elscreen-current-window-configuration))))
-       (t
-        (setq screen (elscreen-get-current-screen))
-        (elscreen-goto-internal screen)
-        (save-selected-window
-          (select-window (split-window))
-          (switch-to-buffer buffer t)))))
+      (condition-case nil
+          (save-window-excursion
+            (setq screen (elscreen-create-internal))
+            (elscreen-goto-internal screen)
+            (switch-to-buffer buffer t)
+            (elscreen-set-window-configuration
+             screen (elscreen-current-window-configuration)))
+        (elscreen-no-more-screens
+         (setq screen (elscreen-get-current-screen))
+         (save-selected-window
+           (select-window (split-window))
+           (switch-to-buffer buffer t)))))
     screen))
 
 (defun elscreen-find-screen-by-major-mode (major-mode-or-re)
@@ -809,7 +833,7 @@ when error is occurred."
              nil)))))))
 
 (defvar elscreen-last-message "Welcome to ElScreen!"
-  "*Last shown message.")
+  "Last shown message.")
 (defun elscreen-message (message &optional sec)
   "Display MESSAGE in mini-buffer for SEC seconds.
 Default value for SEC is 3."
@@ -825,47 +849,45 @@ Default value for SEC is 3."
 (defun elscreen-create ()
   "Create a new screen and switch to it."
   (interactive)
-  (let ((screen (elscreen-create-internal)))
-    (if screen
-        (elscreen-goto screen))))
+  (condition-case nil
+      (elscreen-goto (elscreen-create-internal))
+    (elscreen-no-more-screens
+     (elscreen-message "No more screens"))))
 
 (defun elscreen-clone (&optional screen)
   "Create a new screen with the window-configuration of SCREEN.
 If SCREEN is ommitted, current-screen is used."
   (interactive)
-  (let ((screen (or screen (elscreen-get-current-screen)))
-        clone elscreen-window-configuration)
-    (cond
-     ((not (elscreen-screen-live-p screen))
-      (elscreen-message "There is no such screen, cannot clone"))
-    ((setq clone (elscreen-create-internal))
-     (save-window-excursion
-       (elscreen-goto-internal screen)
-       (setq elscreen-window-configuration
-             (elscreen-current-window-configuration)))
-     (elscreen-set-window-configuration clone elscreen-window-configuration)
-     (elscreen-goto clone)))))
+  (condition-case nil
+      (let* ((screen (or screen (elscreen-get-current-screen)))
+             (elscreen-window-configuration
+              (save-window-excursion
+                (elscreen-goto-internal screen)
+                (elscreen-current-window-configuration)))
+             (clone (elscreen-create-internal)))
+        (elscreen-set-window-configuration clone elscreen-window-configuration)
+        (elscreen-goto clone))
+    (elscreen-nonexistent-screen
+     (elscreen-message "There is no such screen, cannot clone"))
+    (elscreen-no-more-screens
+     (elscreen-message "No more screens"))))
 
 (defvar elscreen-kill-hook nil)
 (defun elscreen-kill (&optional screen)
   "Kill SCREEN.  If optional argument SCREEN is
 ommitted, current-screen is killed."
   (interactive "P")
-  (let ((screen (or (and (numberp screen) screen)
-                    (elscreen-get-current-screen))))
-    (cond
-     ((not (elscreen-screen-live-p screen))
-      (elscreen-message "There is no such screen, cannot kill")
-      nil)
-     ((elscreen-one-screen-p)
-      (elscreen-message "There is only one screen, cannot kill")
-      nil)
-     (t
-      (elscreen-kill-internal screen)
-      (elscreen-goto-internal (elscreen-get-current-screen))
-      (elscreen-notify-screen-modification 'force)
-      (run-hooks 'elscreen-kill-hook)
-      screen))))
+  (condition-case nil
+      (let ((screen (or screen (elscreen-get-current-screen))))
+        (elscreen-kill-internal screen)
+        (elscreen-goto-internal (elscreen-get-current-screen))
+        (elscreen-notify-screen-modification 'force)
+        (run-hooks 'elscreen-kill-hook)
+        screen)
+    (elscreen-nonexistent-screen
+     (elscreen-message "There is no such screen, cannot kill"))
+    (elscreen-sole-screen
+     (elscreen-message "There is only one screen, cannot kill"))))
 
 (defun elscreen-kill-screen-and-buffers (&optional screen)
   "Kill buffers on SCREEN and SCREEN itself.  If optional
@@ -888,11 +910,14 @@ argument SCREEN is omitted, current screen is killed."
   "Kill screens other than SCREEN.  If optional argument SCREEN
 is ommitted, current screen will survive."
   (interactive)
-  (let* ((current-screen (elscreen-get-current-screen))
-         (screen (or screen current-screen))
-         (screen-list (delq screen (sort (elscreen-get-screen-list) '<)))
+  (let* ((screen (or screen (elscreen-get-current-screen)))
+         (screen-list (when (elscreen-screen-live-p screen)
+                        (delq screen (sort (elscreen-get-screen-list) '<))))
          screen-list-string)
     (cond
+     ((not (elscreen-screen-live-p screen)) ;; XXX
+      (when (interactive-p)
+        (elscreen-message "There is no such screen")))
      ((null screen-list)
       (when (interactive-p)
         (elscreen-message "There is only one screen, cannot kill")))
@@ -902,10 +927,9 @@ is ommitted, current screen will survive."
       (setq screen-list-string (mapconcat
                                 (lambda (screen)
                                   (elscreen-kill-internal screen)
-                                  (number-to-string screen))
-                                screen-list ","))
-      (unless (eq current-screen screen)
-        (elscreen-goto-internal screen))
+                                   (number-to-string screen))
+                                 screen-list ","))
+      (elscreen-goto-internal screen)
       (elscreen-notify-screen-modification 'force-immediately)
       (when (interactive-p)
         (elscreen-message (format "screen %s killed" screen-list-string)))))
@@ -915,23 +939,21 @@ is ommitted, current screen will survive."
 (defun elscreen-goto (screen)
   "Switch to screen SCREEN."
   (interactive "NGoto screen number: ")
-  (cond
-   ((eq (elscreen-get-current-screen) screen))
-   ((elscreen-screen-live-p screen)
-    (elscreen-set-window-configuration
-     (elscreen-get-current-screen)
-     (elscreen-current-window-configuration))
-    (elscreen-set-current-screen screen)
-    (elscreen-goto-internal screen)
-    (static-when (and elscreen-on-emacs (= emacs-major-version 21))
-      (when window-system
-        (redraw-frame (selected-frame))))
-    (elscreen-notify-screen-modification 'force)
-    (run-hooks 'elscreen-goto-hook)
-    screen)
-   (t
-    (elscreen-message (format "No screen %d" screen))
-    nil)))
+  (condition-case nil
+      (unless (eq (elscreen-get-current-screen) screen)
+        (elscreen-set-window-configuration
+         (elscreen-get-current-screen)
+         (elscreen-current-window-configuration))
+        (elscreen-goto-internal screen)
+        (elscreen-set-current-screen screen)
+        (static-when (and elscreen-on-emacs (= emacs-major-version 21))
+          (when window-system
+            (redraw-frame (selected-frame))))
+        (elscreen-notify-screen-modification 'force)
+        (run-hooks 'elscreen-goto-hook)
+        screen)
+    (elscreen-nonexistent-screen
+     (elscreen-message (format "No screen %d" screen)))))
 
 (defun elscreen-next ()
   "Switch to the next screen."
@@ -971,10 +993,8 @@ is ommitted, current screen will survive."
     (elscreen-message
      (format "You cannot escape from screen %d!"
              (elscreen-get-current-screen))))
-   ((elscreen-get-previous-screen)
-    (elscreen-goto (elscreen-get-previous-screen)))
    (t
-    (elscreen-previous))))
+    (elscreen-goto (elscreen-get-previous-screen)))))
 
 (defun elscreen-jump ()
   "Switch to specified screen."
@@ -1213,8 +1233,7 @@ Use \\[toggle-read-only] to permit editing."
 (defun elscreen-execute-extended-command (prefix-arg)
   (interactive "P")
   (let ((prefix-arg prefix-arg)
-        (prefix-key (key-description elscreen-prefix-key))
-        target-screen)
+        (prefix-key (key-description elscreen-prefix-key)))
     (setq this-command (intern (completing-read
                                 ;; Note: this has the hard-wired
                                 ;;  "C-u" and "M-x" string bug in common
@@ -1240,9 +1259,10 @@ Use \\[toggle-read-only] to permit editing."
                                 (static-if elscreen-on-xemacs
                                     'read-command-history
                                   'extended-command-history))))
-    (if (setq target-screen (elscreen-create-internal 'noerror))
-        (elscreen-goto target-screen)
-      (select-window (split-window)))
+    (condition-case nil
+        (elscreen-goto (elscreen-create-internal))
+      (elscreen-no-more-screens
+       (select-window (split-window)))) ;; XXX
     (command-execute this-command t)))
 
 
@@ -1258,8 +1278,6 @@ Use \\[toggle-read-only] to permit editing."
             (format "[%d]" (elscreen-get-current-screen)))
       (force-mode-line-update)))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-mode-line-update)
-
   (defun elscreen-e21-mode-line-initialize ()
     (let ((point (or
                   ;; GNU Emacs 21.3.50 or later
@@ -1269,7 +1287,9 @@ Use \\[toggle-read-only] to permit editing."
           (elscreen-mode-line-elm '(elscreen-display-screen-number
                                     (" " elscreen-e21-mode-line-string))))
       (when (null (member elscreen-mode-line-elm mode-line-format))
-        (setcdr point (cons elscreen-mode-line-elm (cdr point))))))
+        (setcdr point (cons elscreen-mode-line-elm (cdr point)))))
+
+    (add-hook 'elscreen-screen-update-hook 'elscreen-e21-mode-line-update))
 
   (add-hook 'elscreen-init-hook 'elscreen-e21-mode-line-initialize)
 
@@ -1362,11 +1382,11 @@ Use \\[toggle-read-only] to permit editing."
         (define-key (current-global-map) [menu-bar elscreen]
           (cons (copy-sequence "ElScreen") elscreen-menu)))))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update)
-
   (defun elscreen-e21-menu-bar-initialize ()
     (define-key-after (lookup-key global-map [menu-bar]) [elscreen]
-      (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer))
+      (cons "ElScreen" (make-sparse-keymap "ElScreen")) 'buffer)
+
+    (add-hook 'elscreen-screen-update-hook 'elscreen-e21-menu-bar-update))
 
   (add-hook 'elscreen-init-hook 'elscreen-e21-menu-bar-initialize)
 
@@ -1497,7 +1517,10 @@ Use \\[toggle-read-only] to permit editing."
 
             (setq header-line-format elscreen-e21-tab-format))))))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update))
+  (defun elscreen-e21-tab-initialize ()
+    (add-hook 'elscreen-screen-update-hook 'elscreen-e21-tab-update))
+
+  (add-hook 'elscreen-init-hook 'elscreen-e21-tab-initialize))
 
 ;; XEmacs
 (static-when elscreen-on-xemacs
@@ -1509,14 +1532,14 @@ Use \\[toggle-read-only] to permit editing."
             (format "[%d]" (elscreen-get-current-screen)))
       (force-mode-line-update)))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-mode-line-update)
-
   (defun elscreen-xmas-mode-line-initialize ()
     (let ((point (memq 'global-mode-string mode-line-format))
           (elscreen-mode-line-elm '(elscreen-display-screen-number
                                     (" " elscreen-xmas-mode-line-string))))
       (if (null (member elscreen-mode-line-elm mode-line-format))
-          (setcdr point (cons elscreen-mode-line-elm (cdr point))))))
+          (setcdr point (cons elscreen-mode-line-elm (cdr point)))))
+
+    (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-mode-line-update))
 
   (add-hook 'elscreen-init-hook 'elscreen-xmas-mode-line-initialize)
 
@@ -1612,8 +1635,6 @@ Use \\[toggle-read-only] to permit editing."
              (selected-frame)))
           (set-gutter-dirty-p 'top)))))
 
-  (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update)
-
   (defun elscreen-xmas-tab-initialize ()
     (let* ((gutter-string (copy-sequence "\n"))
            (gutter-elscreen-tab-extent (make-extent 0 1 gutter-string)))
@@ -1625,7 +1646,9 @@ Use \\[toggle-read-only] to permit editing."
            (set-specifier top-gutter-border-width 0 'global console-type)
            (set-gutter-element top-gutter 'elscreen-tab
                                gutter-string 'global console-type)))
-       (console-type-list))))
+       (console-type-list)))
+
+    (add-hook 'elscreen-screen-update-hook 'elscreen-xmas-tab-update))
 
   (add-hook 'elscreen-init-hook 'elscreen-xmas-tab-initialize))
 
@@ -1633,7 +1656,7 @@ Use \\[toggle-read-only] to permit editing."
 
 (defun elscreen-command-line-funcall (switch-string)
   (let ((argval (intern (car command-line-args-left)))
-        screen elscreen-window-configuration)
+        elscreen-window-configuration)
     (setq command-line-args-left (cdr command-line-args-left))
     (save-window-excursion
       (elscreen-apply-window-configuration
@@ -1647,9 +1670,11 @@ Use \\[toggle-read-only] to permit editing."
     (cond
      ((= file-count 1)
       (elscreen-apply-window-configuration elscreen-window-configuration))
-     ((setq screen (elscreen-create-internal 'noerror))
-      (elscreen-set-window-configuration screen
-                                         elscreen-window-configuration)))))
+     (t
+      (condition-case nil
+          (elscreen-set-window-configuration (elscreen-create-internal)
+                                             elscreen-window-configuration)
+        (elscreen-no-more-screens nil))))))
 
 (defun elscreen-command-line-find-file (file file-count &optional line column)
   (let ((line (or line 0))
@@ -1767,7 +1792,7 @@ Use \\[toggle-read-only] to permit editing."
 
 ;;; Start ElScreen!
 
-(defun elscreen-start ()
+(defun elscreen ()
   ;; Prepare meta data for each frame.
   (mapcar
    (lambda (frame)
@@ -1795,12 +1820,13 @@ Use \\[toggle-read-only] to permit editing."
    (select-frame-hook 'force) ;; XEmacs
    (Info-find-node-2 'force))
 
-  ;; Run initialize hooks.
+  ;; Run initialization hooks.
   (run-hooks 'elscreen-init-hook)
+  (elscreen-notify-screen-modification 'force)
 
   ;; Setup prefix-key.
   (let ((prefix-key elscreen-prefix-key)
         (elscreen-prefix-key nil))
     (elscreen-set-prefix-key prefix-key)))
 
-(elscreen-start)
+(elscreen)
