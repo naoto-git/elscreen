@@ -1,6 +1,6 @@
 ElScreen 1.4.4 README file
 
-This is the distribution of ElScreen 1.4.4, released December 2005.
+This is the distribution of ElScreen 1.4.4, released December 2006.
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on
 terminal.
@@ -11,7 +11,7 @@ switch to a different screen, with its configuration unchanged.
 You can also create and kill screen, jump to them, rename the
 screen, and so on.
 
-This version is developed on (Carbon) Emacs 22.0.50, with APEL 10.6.
+This version is developed on (Carbon) Emacs 22.0.90, with APEL 10.6.
 
 
 Files
