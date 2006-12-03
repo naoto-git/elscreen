@@ -1,3 +1,16 @@
+2006-12-03  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-get-screen-to-name-alist): Use
+	window-minibuffer-p instead of minibufferp, for XEmacs
+	compatibility.
+
+
+2006-11-30  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-get-screen-to-name-alist): Don't add
+	buffer name when it is minibuffer.
+
+
 2006-11-29  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-define-error): New function to define

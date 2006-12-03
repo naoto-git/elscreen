@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.3.17 (November 29, 2006)")
+(defconst elscreen-version "1.4.99.1 (December 03, 2006)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 29, 2006
+;; Revised:  December 03, 2006
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -651,15 +651,16 @@ from `elscreen-frame-confs', a cons cell."
                     (window start-window))
                (while window
                  (with-current-buffer (window-buffer window)
-                   (setq nickname-type-map
-                         (cons (or (elscreen-get-alist-to-nickname
-                                    elscreen-mode-to-nickname-alist-internal
-                                    string-match (symbol-name major-mode))
-                                   (elscreen-get-alist-to-nickname
-                                    elscreen-buffer-to-nickname-alist-internal
-                                    string-match (buffer-name))
-                                   (cons 'buffer-name (buffer-name)))
-                               nickname-type-map))
+                   (unless (window-minibuffer-p window)
+                     (setq nickname-type-map
+                           (cons (or (elscreen-get-alist-to-nickname
+                                      elscreen-mode-to-nickname-alist-internal
+                                      string-match (symbol-name major-mode))
+                                     (elscreen-get-alist-to-nickname
+                                      elscreen-buffer-to-nickname-alist-internal
+                                      string-match (buffer-name))
+                                     (cons 'buffer-name (buffer-name)))
+                                 nickname-type-map)))
                    (setq window (when (not (eq (next-window window)
                                                start-window))
                                   (next-window window))))))
