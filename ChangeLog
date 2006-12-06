@@ -1,6 +1,9 @@
-2006-12-03  Naoto Morishima  <naoto@morishima.net>
+2006-12-06  Naoto Morishima  <naoto@morishima.net>
 
 	ElScreen 1.4.5 released.
+
+
+2006-12-03  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-get-screen-to-name-alist): Use
 	window-minibuffer-p instead of minibufferp, for XEmacs
