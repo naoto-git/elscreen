@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.1 (December 03, 2006)")
+(defconst elscreen-version "1.4.99.2 (September 29 , 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 03, 2006
+;; Revised:  September 29, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -168,10 +168,12 @@ starts up, and opens files with new screen if needed."
              (elscreen-e21-tab-update t)))
     :group 'elscreen)
 
-  (defcustom elscreen-tab-display-kill-screen t
-    "Non-nil to display the icons to kill a screen at left side of each tab."
-    :tag "Show/Hide Buttons to Kill Screen on Each Tab"
-    :type 'boolean
+  (defcustom elscreen-tab-display-kill-screen 'left
+    "Location of the icons to kill a screen on each tab.  Possible values are 'left, 'right, or nil (to hide them)."
+    :tag "Location of Buttons to Kill Screen on Each Tab"
+    :type '(choice (const :tag "Left" left)
+		   (const :tag "Right" right)
+		   (const :tag "None" nil))
     :set (lambda (symbol value)
            (custom-set-default symbol value)
            (when (fboundp 'elscreen-e21-tab-update)
@@ -1474,38 +1476,45 @@ Use \\[toggle-read-only] to permit editing."
 
             (mapcar
              (lambda (screen)
-               (setq elscreen-e21-tab-format
-                     (nconc
-                      elscreen-e21-tab-format
-                      (list
-                       (propertize
-                        (concat
-                         (when elscreen-tab-display-kill-screen
+               (let ((kill-screen
+                      (propertize
+                       "[X]"
+                       'local-map (elscreen-e21-tab-create-keymap
+                                   `(lambda (e)
+                                      (interactive "e")
+                                      (elscreen-kill ,screen)))
+                       'help-echo (format "mouse-1: kill screen %d" screen))))
+                 (setq elscreen-e21-tab-format
+                       (nconc
+                        elscreen-e21-tab-format
+                        (list
+                         (propertize
+                          (concat
+                           (when (or (eq elscreen-tab-display-kill-screen 'left)
+                                     (eq elscreen-tab-display-kill-screen t))
+                             kill-screen)
+                           half-space
                            (propertize
-                            (concat "[X]" half-space)
+                            (format "%d%s%s%s"
+                                    screen
+                                    (elscreen-status-label screen)
+                                    half-space
+                                    (elscreen-e21-tab-escape-%
+                                     (elscreen-truncate-screen-name
+                                      (get-alist screen screen-to-name-alist)
+                                      elscreen-tab-width t)))
+                            'help-echo (get-alist screen screen-to-name-alist)
                             'local-map (elscreen-e21-tab-create-keymap
                                         `(lambda (e)
                                            (interactive "e")
-                                           (elscreen-kill ,screen)))))
-                         (propertize
-                          (format "%d%s%s%s"
-                                  screen
-                                  (elscreen-status-label screen)
-                                  half-space
-                                  (elscreen-e21-tab-escape-%
-                                   (elscreen-truncate-screen-name
-                                    (get-alist screen screen-to-name-alist)
-                                    elscreen-tab-width t)))
-                          'help-echo (get-alist screen screen-to-name-alist)
-                          'local-map (elscreen-e21-tab-create-keymap
-                                      `(lambda (e)
-                                         (interactive "e")
-                                         (elscreen-goto ,screen)))))
-                        'face (if (eq current-screen screen)
-                                  'elscreen-tab-current-screen-face
-                                'elscreen-tab-other-screen-face))
-                       tab-separator))))
-             screen-list)
+                                           (elscreen-goto ,screen))))
+                           (when (eq elscreen-tab-display-kill-screen 'right)
+                             (concat half-space kill-screen)))
+                          'face (if (eq current-screen screen)
+                                    'elscreen-tab-current-screen-face
+                                  'elscreen-tab-other-screen-face))
+                         tab-separator)))))
+               screen-list)
 
             (setq elscreen-e21-tab-format
                   (nconc
@@ -1807,7 +1816,7 @@ Use \\[toggle-read-only] to permit editing."
    (t ;; XEmacs
     (add-hook 'create-frame-hook 'elscreen-make-frame-confs)))
   (static-cond
-   ((boundp 'delete-frame-functions) ;; GNU Emacs 22?
+   ((boundp 'delete-frame-functions) ;; GNU Emacs 22 or later?
     (add-hook 'delete-frame-functions 'elscreen-delete-frame-confs))
    (t ;; XEmacs
     (add-hook 'delete-frame-hook 'elscreen-delete-frame-confs)))
