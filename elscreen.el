@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.2 (September 29 , 2007)")
+(defconst elscreen-version "1.4.99.4 (October 10, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  September 29, 2007
+;; Revised:  October 10, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -172,8 +172,8 @@ starts up, and opens files with new screen if needed."
     "Location of the icons to kill a screen on each tab.  Possible values are 'left, 'right, or nil (to hide them)."
     :tag "Location of Buttons to Kill Screen on Each Tab"
     :type '(choice (const :tag "Left" left)
-		   (const :tag "Right" right)
-		   (const :tag "None" nil))
+                   (const :tag "Right" right)
+                   (const :tag "None" nil))
     :set (lambda (symbol value)
            (custom-set-default symbol value)
            (when (fboundp 'elscreen-e21-tab-update)
@@ -346,41 +346,43 @@ ElScreen also may use this variable internally."
 (defun get-alist (key alist)
   (cdr (assoc key alist)))
 
-(defun elscreen-copy-tree (tree)
+(defsubst elscreen-copy-tree (tree)
   (if (fboundp 'copy-tree)
       (copy-tree tree)
-    (let (clone)
-      (while (consp tree)
-        (setq clone (cons (or (and (consp (car tree))
-                                   (elscreen-copy-tree (car tree)))
-                              (car tree))
-                          clone))
-        (setq tree (cdr tree)))
-      (nconc (nreverse clone) tree))))
+    (elscreen-copy-tree-1 tree)))
+
+(defun elscreen-copy-tree-1 (tree)
+  (let (clone)
+    (while (consp tree)
+      (setq clone (cons (or (and (consp (car tree))
+                                 (elscreen-copy-tree-1 (car tree)))
+                            (car tree))
+                        clone))
+      (setq tree (cdr tree)))
+    (nconc (nreverse clone) tree)))
 
 (defmacro elscreen-save-screen-excursion (&rest body)
   "Execute BODY, preserving ElScreen meta data.
 Return the value of the last form in BODY."
-  (` (let ((original-buffer-list (buffer-list))
-           (original-buffer-live-p nil)
-           (original-elscreen-window-configuration
-            (elscreen-current-window-configuration))
-           (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
-       (unwind-protect
-           (save-window-excursion
-             (,@ body))
-         (setq elscreen-frame-confs original-frame-confs)
-         (elscreen-apply-window-configuration
-          original-elscreen-window-configuration)
-         (mapcar
-          (lambda (buffer)
-            (when (buffer-live-p buffer)
-              (bury-buffer buffer)
-              (setq original-buffer-live-p t)))
-          original-buffer-list)
-         (when original-buffer-live-p
-           (while (not (memq (car (buffer-list)) original-buffer-list))
-             (bury-buffer (car (buffer-list)))))))))
+  `(let ((original-buffer-list (buffer-list))
+         (original-buffer-live-p nil)
+         (original-elscreen-window-configuration
+          (elscreen-current-window-configuration))
+         (original-frame-confs (elscreen-copy-tree elscreen-frame-confs)))
+     (unwind-protect
+         (save-window-excursion ,@body)
+       (setq elscreen-frame-confs original-frame-confs)
+       (elscreen-apply-window-configuration
+        original-elscreen-window-configuration)
+       (mapcar
+        (lambda (buffer)
+          (when (buffer-live-p buffer)
+            (bury-buffer buffer)
+            (setq original-buffer-live-p t)))
+        original-buffer-list)
+       (when original-buffer-live-p
+         (while (not (memq (car (buffer-list)) original-buffer-list))
+           (bury-buffer (car (buffer-list))))))))
 
 (defsubst elscreen-get-frame-confs (frame)
   (get-alist frame elscreen-frame-confs))
@@ -512,8 +514,8 @@ from `elscreen-frame-confs', a cons cell."
 
 (defvar elscreen-notify-screen-modification-suppress-flag nil)
 (defmacro elscreen-notify-screen-modification-suppress (&rest body)
-  (` (let ((elscreen-notify-screen-modification-suppress-flag t))
-       (,@ body))))
+  `(let ((elscreen-notify-screen-modification-suppress-flag t))
+     ,@body))
 
 (defvar elscreen-screen-update-hook nil)
 (defun elscreen-run-screen-update-hook ()
@@ -566,15 +568,15 @@ from `elscreen-frame-confs', a cons cell."
         (cond
          ((string-match "-\\(hooks?\\|functions\\)$"
                         (symbol-name hook-or-function))
-          ( `(add-hook '(, hook-or-function)
-                       (lambda (&rest ignore)
-                         (elscreen-notify-screen-modification (, mode))))))
+          `(add-hook (quote ,hook-or-function)
+                     (lambda (&rest ignore)
+                       (elscreen-notify-screen-modification ,mode))))
          (t ;; Assume hook-or-function is function
-          ( `(defadvice (, hook-or-function) (around
-                                              elscreen-screen-modified-advice
-                                              activate)
-               ad-do-it
-               (elscreen-notify-screen-modification (, mode))))))))
+          `(defadvice ,hook-or-function (around
+                                         elscreen-screen-modified-advice
+                                         activate)
+             ad-do-it
+             (elscreen-notify-screen-modification ,mode))))))
     hooks-and-functions)))
 
 (defun elscreen-get-screen-to-name-alist-cache ()
@@ -612,26 +614,26 @@ from `elscreen-frame-confs', a cons cell."
 (elscreen-set-buffer-to-nickname-alist 'elscreen-buffer-to-nickname-alist)
 
 (defmacro elscreen-get-alist-to-nickname (alist op mode-or-buffer-name)
-  ( `(catch '(, alist)
-       (progn
-         (mapcar
-          (lambda (map)
-            (let ((nickname nil)
-                  (condition-data (car map))
-                  (string-or-function (cdr map)))
-              (when ((, op) condition-data (, mode-or-buffer-name))
-                (cond
-                 ((functionp string-or-function)
-                  (setq nickname
-                        (condition-case nil
-                            (funcall string-or-function)
-                          (wrong-number-of-arguments
-                           (funcall string-or-function (current-buffer))))))
-                 (t
-                  (setq nickname string-or-function)))
-                (throw '(, alist) (cons 'nickname nickname)))))
-          (, alist))
-         nil))))
+  `(catch (quote ,alist)
+     (progn
+       (mapcar
+        (lambda (map)
+          (let ((nickname nil)
+                (condition-data (car map))
+                (string-or-function (cdr map)))
+            (when (,op condition-data ,mode-or-buffer-name)
+              (cond
+               ((functionp string-or-function)
+                (setq nickname
+                      (condition-case nil
+                          (funcall string-or-function)
+                        (wrong-number-of-arguments
+                         (funcall string-or-function (current-buffer))))))
+               (t
+                (setq nickname string-or-function)))
+              (throw (quote ,alist) (cons 'nickname nickname)))))
+        ,alist)
+       nil)))
 
 (defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
   (elscreen-notify-screen-modification-suppress

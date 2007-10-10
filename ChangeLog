@@ -1,3 +1,17 @@
+2007-10-10  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-copy-tree-1): New function.
+	(elscreen-copy-tree): Use it.
+
+
+2007-10-05  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-save-screen-excursion)
+	(elscreen-notify-screen-modification-suppress)
+	(elscreen-screen-modified-hook-setup)
+	(elscreen-get-alist-to-nickname): Eliminate old-style backquotes.
+
+
 2007-09-29  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-tab-display-kill-screen): Now it's used to
