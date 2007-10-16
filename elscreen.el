@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.4 (October 10, 2007)")
+(defconst elscreen-version "1.4.99.5 (October 16, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  October 10, 2007
+;; Revised:  October 16, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1399,20 +1399,25 @@ Use \\[toggle-read-only] to permit editing."
   (defvar elscreen-e21-tab-format nil)
   (make-variable-buffer-local 'elscreen-e21-tab-format)
 
-  (defsubst elscreen-e21-tab-create-keymap (&optional mouse-1 mouse-2 mouse-3)
+  (defsubst elscreen-e21-tab-create-keymap (&rest definitions)
     (let ((keymap (make-sparse-keymap))
-          (mouse-1 (or mouse-1 'ignore))
-          (mouse-2 (or mouse-2 'ignore))
-          (mouse-3 (or mouse-3 'ignore)))
-      (define-key keymap [header-line down-mouse-1] 'ignore)
-      (define-key keymap [header-line down-mouse-2] 'ignore)
-      (define-key keymap [header-line down-mouse-3] 'ignore)
-      (define-key keymap [header-line drag-mouse-1] 'ignore)
-      (define-key keymap [header-line drag-mouse-2] 'ignore)
-      (define-key keymap [header-line drag-mouse-3] 'ignore)
-      (define-key keymap [header-line mouse-1] mouse-1)
-      (define-key keymap [header-line mouse-2] mouse-2)
-      (define-key keymap [header-line mouse-3] mouse-3)
+          (key-function-pairs
+           (eval-when-compile
+             (mapcar
+              (lambda (key)
+                (cons key 'ignore))
+              (list 'mouse-1 'mouse-2 'mouse-3
+                    'down-mouse-1 'down-mouse-2 'down-mouse-3
+                    'drag-mouse-1 'drag-mouse-2 'drag-mouse-3)))))
+      (while definitions
+        (set-alist 'key-function-pairs (car definitions) (cadr definitions))
+        (setq definitions (cddr definitions)))
+      (mapc
+       (lambda (key-function-pair)
+         (let ((key (car key-function-pair))
+               (function (cdr key-function-pair)))
+           (define-key keymap (vector 'header-line key) function)))
+       key-function-pairs)
       keymap))
 
   (defun elscreen-e21-tab-escape-% (string)
@@ -1462,9 +1467,9 @@ Use \\[toggle-read-only] to permit editing."
                               "<->"
                               'face 'elscreen-tab-control-face
                               'local-map (elscreen-e21-tab-create-keymap
-                                          'elscreen-previous
-                                          'elscreen-create
-                                          'elscreen-next)
+                                          'mouse-1 'elscreen-previous
+                                          'mouse-2 'elscreen-create
+                                          'mouse-3 'elscreen-next)
                               'help-echo "mouse-1: previous screen, mouse-2: create new screen, mouse-3: next screen"))))
           (with-current-buffer (window-buffer (frame-first-window))
             (kill-local-variable 'elscreen-e21-tab-format)
@@ -1482,10 +1487,11 @@ Use \\[toggle-read-only] to permit editing."
                       (propertize
                        "[X]"
                        'local-map (elscreen-e21-tab-create-keymap
-                                   `(lambda (e)
-                                      (interactive "e")
-                                      (elscreen-kill ,screen)))
-                       'help-echo (format "mouse-1: kill screen %d" screen))))
+                                   'mouse-1 `(lambda (e)
+                                               (interactive "e")
+                                               (elscreen-kill ,screen))
+                                   'M-mouse-1 'elscreen-kill-screen-and-buffers)
+                       'help-echo (format "mouse-1: kill screen %d, M-mouse-1: kill screen %d and buffers on it" screen screen))))
                  (setq elscreen-e21-tab-format
                        (nconc
                         elscreen-e21-tab-format
@@ -1507,9 +1513,9 @@ Use \\[toggle-read-only] to permit editing."
                                       elscreen-tab-width t)))
                             'help-echo (get-alist screen screen-to-name-alist)
                             'local-map (elscreen-e21-tab-create-keymap
-                                        `(lambda (e)
-                                           (interactive "e")
-                                           (elscreen-goto ,screen))))
+                                        'mouse-1 `(lambda (e)
+                                                    (interactive "e")
+                                                    (elscreen-goto ,screen))))
                            (when (eq elscreen-tab-display-kill-screen 'right)
                              (concat half-space kill-screen)))
                           'face (if (eq current-screen screen)

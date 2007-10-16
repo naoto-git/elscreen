@@ -1,3 +1,11 @@
+2007-10-16  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-e21-tab-create-keymap): Take arguments
+	forming a sequence of KEY FUNCTION pairs.
+	(elscreen-e21-tab-update): Follow above change, and M-mouse-1 on
+	the icon [X] now calls elscreen-kill-screen-and-buffers.
+
+
 2007-10-10  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-copy-tree-1): New function.
