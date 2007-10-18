@@ -1,5 +1,13 @@
 2007-10-16  Naoto Morishima  <naoto@morishima.net>
 
+	* elscreen.el (elscreen-get-alist-to-nickname): Change defmacro
+	to defsubst.
+	(elscreen-get-screen-to-name-alist): Remove deprecated arguments,
+	and rewrite to improve performance.
+
+
+2007-10-16  Naoto Morishima  <naoto@morishima.net>
+
 	* elscreen.el (elscreen-e21-tab-create-keymap): Take arguments
 	forming a sequence of KEY FUNCTION pairs.
 	(elscreen-e21-tab-update): Follow above change, and M-mouse-1 on

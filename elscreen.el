@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.5 (October 16, 2007)")
+(defconst elscreen-version "1.4.99.6 (October 18, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  October 16, 2007
+;; Revised:  October 18, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -613,31 +613,31 @@ from `elscreen-frame-confs', a cons cell."
   (elscreen-rebuild-buffer-to-nickname-alist))
 (elscreen-set-buffer-to-nickname-alist 'elscreen-buffer-to-nickname-alist)
 
-(defmacro elscreen-get-alist-to-nickname (alist op mode-or-buffer-name)
-  `(catch (quote ,alist)
-     (progn
-       (mapcar
-        (lambda (map)
-          (let ((nickname nil)
-                (condition-data (car map))
-                (string-or-function (cdr map)))
-            (when (,op condition-data ,mode-or-buffer-name)
-              (cond
-               ((functionp string-or-function)
-                (setq nickname
-                      (condition-case nil
-                          (funcall string-or-function)
-                        (wrong-number-of-arguments
-                         (funcall string-or-function (current-buffer))))))
-               (t
-                (setq nickname string-or-function)))
-              (throw (quote ,alist) (cons 'nickname nickname)))))
-        ,alist)
-       nil)))
+(defsubst elscreen-get-alist-to-nickname (alist op mode-or-buffer-name)
+  (catch 'found
+    (progn
+      (mapcar
+       (lambda (map)
+         (let ((nickname nil)
+               (condition-data (car map))
+               (string-or-function (cdr map)))
+           (when (funcall op condition-data mode-or-buffer-name)
+             (cond
+              ((functionp string-or-function)
+               (setq nickname
+                     (condition-case nil
+                         (funcall string-or-function)
+                       (wrong-number-of-arguments
+                        (funcall string-or-function (current-buffer))))))
+              (t
+               (setq nickname string-or-function)))
+             (throw 'found (cons 'nickname nickname)))))
+       alist)
+      nil)))
 
-(defun elscreen-get-screen-to-name-alist (&optional truncate-length padding)
-  (elscreen-notify-screen-modification-suppress
-   (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
+(defun elscreen-get-screen-to-name-alist ()
+  (when (elscreen-screen-modified-p 'elscreen-get-screen-to-name-alist)
+    (elscreen-notify-screen-modification-suppress
      (elscreen-set-window-configuration (elscreen-get-current-screen)
                                         (elscreen-current-window-configuration))
      (let* ((screen-list (sort (elscreen-get-screen-list) '<))
@@ -651,52 +651,37 @@ from `elscreen-frame-confs', a cons cell."
            (when (null screen-name)
              (elscreen-goto-internal screen)
 
-             (let* ((start-window (selected-window))
-                    (window start-window))
-               (while window
-                 (with-current-buffer (window-buffer window)
-                   (unless (window-minibuffer-p window)
-                     (setq nickname-type-map
-                           (cons (or (elscreen-get-alist-to-nickname
-                                      elscreen-mode-to-nickname-alist-internal
-                                      string-match (symbol-name major-mode))
-                                     (elscreen-get-alist-to-nickname
-                                      elscreen-buffer-to-nickname-alist-internal
-                                      string-match (buffer-name))
-                                     (cons 'buffer-name (buffer-name)))
-                                 nickname-type-map)))
-                   (setq window (when (not (eq (next-window window)
-                                               start-window))
-                                  (next-window window))))))
+             (setq nickname-type-map
+                   (mapcar
+                    (lambda (window)
+                      (with-current-buffer (window-buffer window)
+                        (or (elscreen-get-alist-to-nickname
+                             elscreen-mode-to-nickname-alist-internal
+                             'string-match (symbol-name major-mode))
+                            (elscreen-get-alist-to-nickname
+                             elscreen-buffer-to-nickname-alist-internal
+                             'string-match (buffer-name))
+                            (cons 'buffer-name (buffer-name)))))
+                    (window-list)))
 
              (let (nickname-list)
                (while (> (length nickname-type-map) 0)
-                 (setq nickname-list (cons (cdar nickname-type-map)
-                                           nickname-list))
-                 (if (eq (caar nickname-type-map) 'nickname)
-                     (setq nickname-type-map
-                           (delete (car nickname-type-map) nickname-type-map))
-                   (setq nickname-type-map (cdr nickname-type-map))))
-               (setq screen-name (mapconcat (lambda (v) v) nickname-list ":"))))
+                 (let ((type (caar nickname-type-map))
+                       (name (cdar nickname-type-map)))
+                   (when name
+                     (setq nickname-list (cons name nickname-list)))
+                   (setq nickname-type-map
+                         (if (eq type 'nickname)
+                             (delete (car nickname-type-map) nickname-type-map)
+                           (cdr nickname-type-map)))))
+               (setq screen-name
+                     (mapconcat (lambda (v) v) (reverse nickname-list) ":"))))
 
            (set-alist 'screen-to-name-alist screen screen-name))
          screen-list))
 
        (elscreen-set-screen-to-name-alist-cache screen-to-name-alist))))
-
-  ;; Arguments of truncate-length and padding are deprecated.
-  (if truncate-length
-      (let ((screen-to-name-alist
-             (copy-alist (elscreen-get-screen-to-name-alist-cache))))
-        (elscreen-message "Arguments for `elscreen-get-screen-to-name-alist' are deprecated.  Use elscreen-truncate-screen-name for each screen-name.")
-        (mapc
-         (lambda (screen-to-name)
-           (setcdr screen-to-name
-                   (elscreen-truncate-screen-name (cdr screen-to-name)
-                                                  truncate-length padding)))
-         screen-to-name-alist)
-        screen-to-name-alist)
-    (elscreen-get-screen-to-name-alist-cache)))
+  (elscreen-get-screen-to-name-alist-cache))
 
 (defun elscreen-truncate-screen-name (screen-name truncate-length &optional padding)
   (let ((truncate-length (max truncate-length 4)))
