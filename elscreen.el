@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.6 (October 18, 2007)")
+(defconst elscreen-version "1.4.99.7 (October 19, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  October 18, 2007
+;; Revised:  October 19, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -675,7 +675,7 @@ from `elscreen-frame-confs', a cons cell."
                              (delete (car nickname-type-map) nickname-type-map)
                            (cdr nickname-type-map)))))
                (setq screen-name
-                     (mapconcat (lambda (v) v) (reverse nickname-list) ":"))))
+                     (mapconcat 'identity (reverse nickname-list) ":"))))
 
            (set-alist 'screen-to-name-alist screen screen-name))
          screen-list))
@@ -1475,7 +1475,9 @@ Use \\[toggle-read-only] to permit editing."
                                    'mouse-1 `(lambda (e)
                                                (interactive "e")
                                                (elscreen-kill ,screen))
-                                   'M-mouse-1 'elscreen-kill-screen-and-buffers)
+                                   'M-mouse-1 `(lambda (e)
+                                                 (interactive "e")
+                                                 (elscreen-kill-screen-and-buffers ,screen)))
                        'help-echo (format "mouse-1: kill screen %d, M-mouse-1: kill screen %d and buffers on it" screen screen))))
                  (setq elscreen-e21-tab-format
                        (nconc

@@ -1,4 +1,10 @@
-2007-10-16  Naoto Morishima  <naoto@morishima.net>
+2007-10-19  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-e21-tab-update): Fix bug in local-map
+	of [X] icon.
+
+
+2007-10-18  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-get-alist-to-nickname): Change defmacro
 	to defsubst.
