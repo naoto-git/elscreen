@@ -1,3 +1,10 @@
+2007-11-21  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-default-window-configuration): Split
+	window first to avoid error in case that the selected window is
+	dedicated.
+
+
 2007-10-19  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-e21-tab-update): Fix bug in local-map

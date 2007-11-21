@@ -139,8 +139,9 @@ can be set in .emacs file directly or "Options" in your menu bar.
 
   elscreen-tab-display-kill-screen (only for GNU Emacs 21)
 
-    If non nil, display the icon ([X]) to kill corresponding screen.
-    The default value is `t'.
+    Location of the icon ([X]) to kill corresponding screen on each
+    tab.  Possible values are 'left, 'right and nil (to hide the
+    icons).  The default value is 'left.
 
 
 Where Can I Get ElScreen?
