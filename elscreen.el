@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.8 (November 21, 2007)")
+(defconst elscreen-version "1.4.99.9 (November 22, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 21, 2007
+;; Revised:  November 22, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -329,7 +329,9 @@ ElScreen also may use this variable internally."
     (save-window-excursion
       ;; At first we should split window to avoid error when the
       ;; selected window is dedicated.
-      (select-window (split-window))
+      (when (window-dedicated-p (selected-window))
+        (delete-other-windows)
+        (select-window (split-window)))
       (delete-other-windows)
       (if default-buffer
           (switch-to-buffer default-buffer)
