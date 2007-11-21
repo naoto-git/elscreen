@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.5.99.0 (November 21, 2007)")
+(defconst elscreen-version "1.4.5.99.1 (November 21, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -321,7 +321,9 @@ starts up, and opens files with new screen if needed."
     (save-window-excursion
       ;; At first we should split window to avoid error when the
       ;; selected window is dedicated.
-      (select-window (split-window))
+      (when (window-dedicated-p (selected-window))
+        (delete-other-windows)
+        (select-window (split-window)))
       (delete-other-windows)
       (if default-buffer
           (switch-to-buffer default-buffer)
