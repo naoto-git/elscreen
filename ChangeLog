@@ -1,7 +1,7 @@
 2007-11-22  Naoto Morishima  <naoto@morishima.net>
 
-	* elscreen.el (elscreen-default-window-configuration): Delete
-	other windows before splitting to avoid error.
+	* elscreen.el (elscreen-default-window-configuration): Set
+	dedicated-p of selected-window to nil instead of splitting it.
 
 
 2007-11-21  Naoto Morishima  <naoto@morishima.net>
