@@ -1,6 +1,6 @@
-ElScreen 1.4.5 README file
+ElScreen 1.4.6 README file
 
-This is the distribution of ElScreen 1.4.5, released December 2006.
+This is the distribution of ElScreen 1.4.6, released December 2007.
 It is an Emacs utility with which you can have multiple screens
 (window-configuration) on your GNU Emacs as well as GNU screen on
 terminal.
@@ -11,15 +11,15 @@ switch to a different screen, with its configuration unchanged.
 You can also create and kill screen, jump to them, rename the
 screen, and so on.
 
-This version is developed on (Carbon) Emacs 22.0.90, with APEL 10.6.
+This version is developed on (Carbon) Emacs 22.1.50, with APEL 10.7.
 
 
 Files
 -----
 This package should contain the following files:
 
-  elscreen.el     ElScreen version 1.4.5 main file
-  README          Introduction to ElScreen 1.4.5 (this file)
+  elscreen.el     ElScreen version 1.4.6 main file
+  README          Introduction to ElScreen 1.4.6 (this file)
   ChangeLog       ElScreen ChangeLog file
 
 
@@ -88,32 +88,40 @@ can be set in .emacs file directly or "Options" in your menu bar.
 
   elscreen-buffer-to-nickname-alist
 
-    The pairs of buffer-name and corresponding screen nickname, which
-    are listed by 'elscreen-display-screen-name-list' only when
-    major-mode cannot determine its screen nickname.  The default
-    value is:
+    The pairs of buffer-name and corresponding screen nickname or
+    function that returns nickname, which are listed by
+    'elscreen-display-screen-name-list' only when major-mode cannot
+    determine its screen nickname.  The default value is:
 
-        '(("^mew-" . "Mew")
+        '(("^dired-mode$" .
+           (lambda ()
+             (format "Dired(%s)" dired-directory)))
+          ("^Info-mode$" .
+           (lambda ()
+             (format "Info(%s)" (file-name-nondirectory Info-current-file))))
+          ("^mew-draft-mode$" .
+           (lambda ()
+             (format "Mew(%s)" (buffer-name (current-buffer)))))
+          ("^mew-" . "Mew")
           ("^irchat-" . "IRChat")
           ("^liece-" . "Liece")
-          ("^dired-mode$" . "Dired")
-          ("^Info-mode$" . "Info")
           ("^lookup-" . "Lookup"))
 
   elscreen-mode-to-nickname-alist
 
-    The pairs of major-mode and corresponding screen nickname, which
-    are listed by 'elscreen-display-screen-name-list'.  The default
-    value is:
+    The pairs of major-mode and corresponding screen nickname or
+    function that returns nickname, which are listed by
+    'elscreen-display-screen-name-list'.  The default value is:
 
         '(("[Ss]hell" . "shell")
           ("compilation" . "compile")
           ("-telnet" . "telnet")
-          ("dict" . "OnlineDict"))
+          ("dict" . "OnlineDict")
+          ("*WL:Message*" . "Wanderlust"))
 
   elscreen-startup-command-line-processing
 
-    If non nil, ElScreen processes command line arguments of Emacssen
+    If non nil, ElScreen processes command line arguments of Emacsen
     when starting up, and opens files with new screens if needed.  The
     default value is `t'.
 
@@ -124,12 +132,11 @@ can be set in .emacs file directly or "Options" in your menu bar.
 
   elscreen-display-tab
 
-    If non nil, display screen tabs at the top of frame.  The default
-    value is `t'.
-
-  elscreen-tab-width
-
-    Label width of each tab.  The default value is 16.
+    Specify how the tabs at the top of frame should be displayed.  t
+    means to display tabs whose width should be calculated
+    automatically.  A value of integer means to display tabs with
+    fixed width of this value.   nil means don't display tabs.  The
+    default value is `t'.
 
   elscreen-tab-display-control (only for GNU Emacs 21)
 
@@ -139,8 +146,9 @@ can be set in .emacs file directly or "Options" in your menu bar.
 
   elscreen-tab-display-kill-screen (only for GNU Emacs 21)
 
-    If non nil, display the icon ([X]) to kill corresponding screen.
-    The default value is `t'.
+    Location of the icon ([X]) to kill corresponding screen on each
+    tab.  Possible values are 'left, 'right and nil (to hide icons).
+    The default value is 'left.
 
 
 Where Can I Get ElScreen?
@@ -182,3 +190,5 @@ various improvements.  Here is a list of these people.
   Dan Debertin
   Yoshinori Koseki
   Hideyuki Shirai
+  Masahiro Ishiyama
+  Alexy Khrabrov
