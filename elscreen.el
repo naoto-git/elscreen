@@ -42,7 +42,7 @@
   :group 'environment)
 
 (defcustom elscreen-prefix-key "\C-z"
-  "Prefix key for ElScreen commands."
+  "*Prefix key for ElScreen commands."
   :tag "Prefix Key of ElScreen"
   :type '(string :size 10)
   :set (lambda (symbol value)
@@ -52,19 +52,19 @@
   :group 'elscreen)
 
 (defcustom elscreen-default-buffer-name "*scratch*"
-  "Name of a buffer in new screen."
+  "*Name of a buffer in new screen."
   :tag "Name of Default Buffer"
   :type '(string :size 24)
   :group 'elscreen)
 
 (defcustom elscreen-default-buffer-initial-major-mode initial-major-mode
-  "Major mode command symbol to use for the default buffer."
+  "*Major mode command symbol to use for the default buffer."
   :tag "Major Mode for Default Buffer"
   :type 'function
   :group 'elscreen)
 
 (defcustom elscreen-default-buffer-initial-message initial-scratch-message
-  "Initial message displayed in default buffer.
+  "*Initial message displayed in default buffer.
 If this is nil, no message will be displayed."
   :tag "Message to Display in the Default Buffer"
   :type '(choice (text :tag "Message")
@@ -85,7 +85,7 @@ If this is nil, no message will be displayed."
     ("^irchat-" . "IRChat")
     ("^liece-" . "Liece")
     ("^lookup-" . "Lookup"))
-  "Alist composed of the pair of name of major-mode and corresponding screen-name."
+  "*Alist composed of the pair of name of major-mode and corresponding screen-name."
   :tag "Alist to Derive Screen Names from Major Modes"
   :type '(alist :key-type string :value-type (choice string function))
   :set (lambda (symbol value)
@@ -100,7 +100,7 @@ If this is nil, no message will be displayed."
     ("-telnet" . "telnet")
     ("dict" . "OnlineDict")
     ("*WL:Message*" . "Wanderlust"))
-  "Alist composed of the pair of regular expression of
+  "*Alist composed of the pair of regular expression of
 buffer-name and corresponding screen-name."
   :tag "Alist to Derive Screen Names from Major Modes"
   :type '(alist :key-type string :value-type (choice string function))
@@ -111,40 +111,31 @@ buffer-name and corresponding screen-name."
   :group 'elscreen)
 
 (defcustom elscreen-startup-command-line-processing t
-  "If non-nil, ElScreen processes command line when Emacsen
+  "*If non-nil, ElScreen processes command line when Emacsen
 starts up, and opens files with new screen if needed."
   :type 'boolean
   :tag "Enable/Disable ElScreen to Process Command Line Arguments"
   :group 'elscreen)
 
 (defcustom elscreen-display-screen-number t
-  "Non-nil to display the number of current screen in the mode line."
+  "*Non-nil to display the number of current screen in the mode line."
   :tag "Show/Hide Screen Number on the mode-line"
   :type 'boolean
   :group 'elscreen)
 
 (defcustom elscreen-display-tab t
-  "Non-nil to display the tabs at the top of screen."
-  :tag "Show/Hide the Tab on the Top of Each Frame"
-  :type 'boolean
+  "*Specify how the tabs at the top of frame should be displayed.
+t means to display tabs whose width should be calculated automatically.
+A value of integer means to display tabs with fixed width of this value.
+nil means don't display tabs."
+  :tag "Specify how the tabs at the top of frame should be displayed"
+  :type '(choice (const :tag "Show (automatic width tab)" t)
+                 (integer :tag "Show (fixed width tab)" :size 4 :value 16)
+                 (const :tag "Hide" nil))
   :set (lambda (symbol value)
-         (custom-set-default symbol value)
-         (static-cond
-          (elscreen-on-emacs
-           (when (fboundp 'elscreen-e21-tab-update)
-             (elscreen-e21-tab-update t)))
-          (elscreen-on-xemacs
-           (when (fboundp 'elscreen-xmas-tab-update)
-             (elscreen-xmas-tab-update t)))))
-  :group 'elscreen)
-
-(defcustom elscreen-tab-width 16
-  "Tab width (should be equal or greater than 6)."
-  :tag "Width of Each Tab"
-  :type '(integer :size 4)
-  :set (lambda (symbol value)
-         (when (and (numberp value)
-                    (>= value 6))
+         (when (or (booleanp value)
+                   (and (numberp value)
+                        (> value 0)))
            (custom-set-default symbol value)
            (static-cond
             (elscreen-on-emacs
@@ -159,7 +150,7 @@ starts up, and opens files with new screen if needed."
   (make-obsolete-variable 'elscreen-tab-display-create-screen
                           'elscreen-tab-display-control)
   (defcustom elscreen-tab-display-control t
-    "Non-nil to display control tab at the most left side."
+    "*Non-nil to display control tab at the most left side."
     :tag "Show/Hide the Control Tab"
     :type 'boolean
     :set (lambda (symbol value)
@@ -169,7 +160,7 @@ starts up, and opens files with new screen if needed."
     :group 'elscreen)
 
   (defcustom elscreen-tab-display-kill-screen 'left
-    "Location of the icons to kill a screen on each tab.  Possible values are 'left, 'right, or nil (to hide them)."
+    "*Location of the icons to kill a screen on each tab.  Possible values are 'left, 'right, or nil (to hide them)."
     :tag "Location of Buttons to Kill Screen on Each Tab"
     :type '(choice (const :tag "Left" left)
                    (const :tag "Right" right)
@@ -1406,6 +1397,17 @@ Use \\[toggle-read-only] to permit editing."
        key-function-pairs)
       keymap))
 
+  (defsubst elscreen-e21-tab-width ()
+    (if (numberp elscreen-display-tab)
+        elscreen-display-tab
+      (let* ((number-of-screens (elscreen-get-number-of-screens))
+             (available-width
+              (- (frame-width) (if elscreen-tab-display-control 4 0)))
+             (tab-width
+              (round (- (/ available-width number-of-screens)
+                        (if elscreen-tab-display-kill-screen 5.5 1.5)))))
+        (max (min tab-width 16) 1))))
+
   (defun elscreen-e21-tab-escape-% (string)
     (if (string-match "%" string)
         (let ((retval "")
@@ -1498,7 +1500,7 @@ Use \\[toggle-read-only] to permit editing."
                                     (elscreen-e21-tab-escape-%
                                      (elscreen-truncate-screen-name
                                       (get-alist screen screen-to-name-alist)
-                                      elscreen-tab-width t)))
+                                      (elscreen-e21-tab-width) t)))
                             'help-echo (get-alist screen screen-to-name-alist)
                             'local-map (elscreen-e21-tab-create-keymap
                                         'mouse-1 `(lambda (e)
@@ -1604,6 +1606,9 @@ Use \\[toggle-read-only] to permit editing."
   (add-hook 'elscreen-init-hook 'elscreen-xmas-menu-bar-initialize)
 
   ;; Tab
+  (defsubst elscreen-xmas-tab-width ()
+    (if (numberp elscreen-display-tab) elscreen-display-tab 16))
+
   (defvar elscreen-xmas-tab-glyph (make-glyph))
   (defun elscreen-xmas-tab-update (&optional force)
     (if (or (not elscreen-display-tab)
@@ -1626,7 +1631,7 @@ Use \\[toggle-read-only] to permit editing."
                               (elscreen-status-label screen)
                               (elscreen-truncate-screen-name
                                (get-alist screen screen-to-name-alist)
-                               elscreen-tab-width t))
+                               (elscreen-xmas-tab-width) t))
                       `(elscreen-goto ,screen)
                       :selected (eq screen current-screen)))
                    screen-list)))

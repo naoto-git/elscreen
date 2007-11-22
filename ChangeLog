@@ -1,7 +1,13 @@
 2007-11-22  Naoto Morishima  <naoto@morishima.net>
 
-	* elscreen.el (elscreen-default-window-configuration): Set
-	dedicated-p of selected-window to nil instead of splitting it.
+	* elscreen.el (elscreen-display-tab): Change type from boolean to
+	choice of boolean and integer.  t means display with automatic
+	width calculation, and integer means display with fixed width.
+	(elscreen-tab-width): Removed.
+	(elscreen-e21-tab-width,elscreen-xmas-tab-width): New functions.
+	(elscreen-e21-tab-update,elscreen-xmas-tab-update): Use them.
+	(elscreen-default-window-configuration): Set dedicated-p of
+	selected-window to nil instead of splitting it.
 
 
 2007-11-21  Naoto Morishima  <naoto@morishima.net>
