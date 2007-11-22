@@ -319,11 +319,7 @@ starts up, and opens files with new screen if needed."
 (defun elscreen-default-window-configuration ()
   (let ((default-buffer (get-buffer elscreen-default-buffer-name)))
     (save-window-excursion
-      ;; At first we should split window to avoid error when the
-      ;; selected window is dedicated.
-      (when (window-dedicated-p (selected-window))
-        (delete-other-windows)
-        (select-window (split-window)))
+      (set-window-dedicated-p (selected-window) nil)
       (delete-other-windows)
       (if default-buffer
           (switch-to-buffer default-buffer)
