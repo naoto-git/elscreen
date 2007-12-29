@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.9 (November 22, 2007)")
+(defconst elscreen-version "1.4.99.10 (December 29, 2007)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  November 22, 2007
+;; Revised:  December 29, 2007
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -404,10 +404,7 @@ Return the value of the last form in BODY."
         (select-frame selected-frame)))))
 
 (defun elscreen-delete-frame-confs (frame)
-  (remove-alist 'elscreen-frame-confs frame)
-  (when (eq frame (selected-frame))
-    (select-frame (previous-frame))
-    (elscreen-notify-screen-modification 'force-immediately)))
+  (remove-alist 'elscreen-frame-confs frame))
 
 (defsubst elscreen-get-conf-list (type)
   (get-alist type (elscreen-get-frame-confs (selected-frame))))
@@ -1829,6 +1826,7 @@ Use \\[toggle-read-only] to permit editing."
    window-configuration-change-hook window-size-change-functions
    (handle-switch-frame 'force) ;; GNU Emacs 21
    (select-frame-hook 'force) ;; XEmacs
+   (delete-frame 'force)
    (Info-find-node-2 'force))
 
   ;; Run initialization hooks.
