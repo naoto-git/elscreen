@@ -1,3 +1,9 @@
+2007-12-29  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-delete-frame-confs): Don't call
+	elscreen-notify-screen-modification which potentially causes an
+	error when frame has been created via make-frame-on-display.
+
 2007-11-22  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-display-tab): Change type from boolean to
