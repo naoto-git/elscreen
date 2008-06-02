@@ -2,7 +2,7 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.6.99.1 (June 02, 2008)")
+(defconst elscreen-version "1.4.6.99.2 (June 02, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
@@ -1230,9 +1230,21 @@ Use \\[toggle-read-only] to permit editing."
   (toggle-read-only 1))
 
 (defun elscreen-dired (dirname &optional switches)
-  (interactive (progn
-                 (or (featurep 'dired) (require 'dired))
-                 (dired-read-dir-and-switches "in new screen ")))
+  (interactive
+   (progn
+     (or (featurep 'dired) (require 'dired))
+     (cond
+      ((and (featurep 'ido)
+            (memq ido-mode '(file both))
+            (not (next-read-file-uses-dialog-p)))
+       (reverse
+        (list
+         (when current-prefix-arg
+           (read-string "Dired listing switches: " dired-listing-switches))
+         (ido-read-directory-name "Dired in new screen (directory): "
+                                  nil default-directory nil))))
+      (t
+       (dired-read-dir-and-switches "in new screen ")))))
   (elscreen-find-and-goto-by-buffer (dired-noselect dirname switches) 'create))
 
 (defun elscreen-execute-extended-command (prefix-arg)

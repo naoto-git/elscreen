@@ -4,6 +4,7 @@
 	(elscreen-find-and-goto-by-buffer): Use it.
 	(elscreen-read-file-name): New function.
 	(elscreen-find-file,elscreen-find-file-read-only): Use it.
+	(elscreen-dired): Support ido-style directory reading.
 
 
 2007-12-29  Naoto Morishima  <naoto@morishima.net>
