@@ -1,3 +1,11 @@
+2008-06-02  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-read-buffer): New function.
+	(elscreen-find-and-goto-by-buffer): Use it.
+	(elscreen-read-file-name): New function.
+	(elscreen-find-file,elscreen-find-file-read-only): Use it.
+
+
 2007-12-29  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-delete-frame-confs): Don't call

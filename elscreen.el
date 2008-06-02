@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.10 (December 29, 2007)")
+(defconst elscreen-version "1.4.99.11 (June 02, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  December 29, 2007
+;; Revised:  June 02, 2008
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -1169,6 +1169,17 @@ is ommitted, current screen will survive."
      (t
       (elscreen-goto (string-to-number command-or-target-screen))))))
 
+(defun elscreen-read-buffer (prompt &optional def require-match)
+  (cond
+   ((and (featurep 'ido)
+         (memq ido-mode '(buffer both))
+         (ido-read-buffer prompt def require-match)))
+   ((and (featurep 'iswitchb)
+         iswitchb-mode
+         (iswitchb-read-buffer prompt def require-match)))
+   (t
+    (read-buffer prompt def require-match))))
+
 (defun elscreen-find-and-goto-by-buffer (&optional buffer create noselect)
   "Go to the screen that has the window with buffer BUFFER,
 creating one if none already exists."
@@ -1177,9 +1188,7 @@ creating one if none already exists."
          (create (or create (interactive-p)))
          (buffer-name (or (and (bufferp buffer) (buffer-name buffer))
                           (and (stringp buffer) buffer)
-                          (and (featurep 'iswitchb)
-                               (iswitchb-read-buffer prompt))
-                          (read-buffer prompt)))
+                          (elscreen-read-buffer prompt)))
          (target-screen (elscreen-find-screen-by-buffer
                          (get-buffer-create buffer-name) create)))
     (when target-screen
@@ -1188,18 +1197,29 @@ creating one if none already exists."
         (select-window (get-buffer-window buffer-name))))
     target-screen))
 
+(defun elscreen-read-file-name (prompt &optional dir default-filename mustmatch initial predicate)
+  (cond
+   ((and (featurep 'ido)
+         (memq ido-mode '(file both)))
+    (ido-read-file-name prompt dir default-filename
+                        mustmatch initial predicate))
+   (t
+    (read-file-name prompt dir default-filename
+                    mustmatch initial predicate))))
+
 (defun elscreen-find-file (filename)
   "Edit file FILENAME.
 Switch to a screen visiting file FILENAME,
 creating one if none already exists."
-  (interactive "FFind file in new screen: ")
+  (interactive (list (elscreen-read-file-name "Find file in new screen: ")))
   (elscreen-find-and-goto-by-buffer (find-file-noselect filename) 'create))
 
 (defun elscreen-find-file-read-only (filename)
   "Edit file FILENAME with new screen but don't allow changes.
 Like \\[elscreen-find-file] but marks buffer as read-only.
 Use \\[toggle-read-only] to permit editing."
-  (interactive "FFind file read-only in new screen: ")
+  (interactive (list (elscreen-read-file-name
+                      "Find file read-only in new screen: ")))
   (elscreen-find-file filename)
   (toggle-read-only 1))
 
