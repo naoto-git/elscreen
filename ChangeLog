@@ -1,3 +1,9 @@
+2008-06-22  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-mode-to-nickname-alist): Remove the
+	definitions for Mew which will be defined in elscreen-mew.el.
+
+
 2008-06-02  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-read-buffer): New function.
@@ -5,6 +11,11 @@
 	(elscreen-read-file-name): New function.
 	(elscreen-find-file,elscreen-find-file-read-only): Use it.
 	(elscreen-dired): Support ido-style directory reading.
+
+
+2007-12-30  Naoto Morishima  <naoto@morishima.net>
+
+	ElScreen 1.4.6 released.
 
 
 2007-12-29  Naoto Morishima  <naoto@morishima.net>
