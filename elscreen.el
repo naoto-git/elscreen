@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.12 (June 02, 2008)")
+(defconst elscreen-version "1.4.99.13 (June 28, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  June 02, 2008
+;; Revised:  June 28, 2008
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -504,10 +504,11 @@ from `elscreen-frame-confs', a cons cell."
 
 (defvar elscreen-screen-update-hook nil)
 (defun elscreen-run-screen-update-hook ()
-  (when elscreen-frame-confs
-    (elscreen-notify-screen-modification-suppress
-     (run-hooks 'elscreen-screen-update-hook)))
-  (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook))
+  (unwind-protect
+      (when elscreen-frame-confs
+        (elscreen-notify-screen-modification-suppress
+         (run-hooks 'elscreen-screen-update-hook)))
+    (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook)))
 
 (defun elscreen-screen-modified-p (inquirer)
   (let* ((inquirer-list (elscreen-get-conf-list 'modified-inquirer))
@@ -521,9 +522,12 @@ from `elscreen-frame-confs', a cons cell."
   (add-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (cond
- ((fboundp 'compare-window-configurations)) ;; GNU Emacs
+ ((fboundp 'compare-window-configurations) ;; GNU Emacs
+  (defalias 'elscreen-compare-window-configurations
+    'compare-window-configurations))
  ((fboundp 'window-configuration-equal) ;; XEmacs 21.5
-  (defalias 'compare-window-configurations 'window-configuration-equal)))
+  (defalias 'elscreen-compare-window-configurations
+    'window-configuration-equal)))
 (defvar elscreen-screen-modified-hook-pwc nil)
 (defun elscreen-notify-screen-modification (&optional mode)
   (when (and (not (window-minibuffer-p))
@@ -531,8 +535,8 @@ from `elscreen-frame-confs', a cons cell."
              (or (eq mode 'force)
                  (eq mode 'force-immediately)
                  (null elscreen-screen-modified-hook-pwc)
-                 (not (fboundp 'compare-window-configurations))
-                 (not (compare-window-configurations
+                 (not (fboundp 'elscreen-compare-window-configurations))
+                 (not (elscreen-compare-window-configurations
                        (current-window-configuration)
                        elscreen-screen-modified-hook-pwc))))
     (setq elscreen-screen-modified-hook-pwc
@@ -1269,7 +1273,7 @@ Use \\[toggle-read-only] to permit editing."
     (condition-case nil
         (elscreen-goto (elscreen-create-internal))
       (elscreen-no-more-screens
-       (select-window (split-window)))) ;; XXX
+       (select-window (split-window))))
     (command-execute this-command t)))
 
 
