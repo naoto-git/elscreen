@@ -1,3 +1,11 @@
+2008-06-29  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-run-screen-update-hook): Enclose the body
+	with unwind-protect to ensure remove itself from post-command-hook.
+	(elscreen-compare-window-configurations): New alias.
+	(elscreen-notify-screen-modification): Use it.
+
+
 2008-06-22  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-mode-to-nickname-alist): Remove the
