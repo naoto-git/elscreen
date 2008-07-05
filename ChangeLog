@@ -1,3 +1,11 @@
+2008-07-04  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-prefix-key): Test elscreen-set-prefix-key
+	instead of elscreen-map.
+	(elscreen-buffer-to-nickname-alist): Remove definition related to
+	Wanderlust.
+
+
 2008-06-29  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-run-screen-update-hook): Enclose the body
