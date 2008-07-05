@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.6.99.3 (June 29, 2008)")
+(defconst elscreen-version "1.4.6.99.4 (July 04, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  June 29, 2008
+;; Revised:  July 04, 2008
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -46,7 +46,7 @@
   :tag "Prefix Key of ElScreen"
   :type '(string :size 10)
   :set (lambda (symbol value)
-         (when (boundp 'elscreen-map)
+         (when (fboundp 'elscreen-set-prefix-key)
            (elscreen-set-prefix-key value))
          (custom-set-default symbol value))
   :group 'elscreen)
@@ -94,8 +94,7 @@ If this is nil, no message will be displayed."
   '(("[Ss]hell" . "shell")
     ("compilation" . "compile")
     ("-telnet" . "telnet")
-    ("dict" . "OnlineDict")
-    ("*WL:Message*" . "Wanderlust"))
+    ("dict" . "OnlineDict"))
   "Alist composed of the pair of regular expression of
 buffer-name and corresponding screen-name."
   :tag "Alist to Derive Screen Names from Major Modes"
