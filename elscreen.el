@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.14 (July 04, 2008)")
+(defconst elscreen-version "1.4.99.15 (July 12, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 04, 2008
+;; Revised:  July 12, 2008
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -392,7 +392,7 @@ Return the value of the last form in BODY."
                                     (cons 'window-configuration
                                           elscreen-window-configuration)))))
                     (cons 'screen-history (list 0))
-                    (cons 'modified-inquirer nil)
+                    (cons 'modification-inquirer nil)
                     (cons 'screen-to-name-alist-cache nil)))
         (elscreen-apply-window-configuration elscreen-window-configuration)
         (elscreen-notify-screen-modification 'force-immediately)
@@ -498,7 +498,8 @@ from `elscreen-frame-confs', a cons cell."
 
 (defvar elscreen-notify-screen-modification-suppress-flag nil)
 (defmacro elscreen-notify-screen-modification-suppress (&rest body)
-  `(let ((elscreen-notify-screen-modification-suppress-flag t))
+  `(let ((elscreen-notify-screen-modification-suppress-flag t)
+         (window-configuration-change-hook nil))
      ,@body))
 
 (defvar elscreen-screen-update-hook nil)
@@ -510,14 +511,14 @@ from `elscreen-frame-confs', a cons cell."
     (remove-hook 'post-command-hook 'elscreen-run-screen-update-hook)))
 
 (defun elscreen-screen-modified-p (inquirer)
-  (let* ((inquirer-list (elscreen-get-conf-list 'modified-inquirer))
+  (let* ((inquirer-list (elscreen-get-conf-list 'modification-inquirer))
          (modified (null (memq inquirer inquirer-list))))
     (add-to-list 'inquirer-list inquirer)
-    (elscreen-set-conf-list 'modified-inquirer inquirer-list)
+    (elscreen-set-conf-list 'modification-inquirer inquirer-list)
     modified))
 
 (defun elscreen-set-screen-modified ()
-  (elscreen-set-conf-list 'modified-inquirer nil)
+  (elscreen-set-conf-list 'modification-inquirer nil)
   (add-hook 'post-command-hook 'elscreen-run-screen-update-hook))
 
 (cond
@@ -705,7 +706,7 @@ from `elscreen-frame-confs', a cons cell."
    (elscreen-sole-screen "Sole screen" elscreen-error)))
 
 (defun elscreen-goto-internal (screen)
-  "Set the configuration of windows, buffers and markers previousuly
+  "Set the configuration of windows, buffers and markers previously
 stored as SCREEN."
   (unless (elscreen-screen-live-p screen)
     (signal 'elscreen-nonexistent-screen screen))
@@ -1033,7 +1034,7 @@ is ommitted, current screen will survive."
 (elscreen-set-help 'elscreen-help)
 
 (defun elscreen-help ()
-  "Show key bindings of ElScreen and Add-On softwares."
+  "Show key bindings of ElScreen and Add-On software."
   (interactive)
   (with-output-to-temp-buffer "*ElScreen Help*"
     (princ (substitute-command-keys
@@ -1831,7 +1832,10 @@ Use \\[toggle-read-only] to permit editing."
 
 ;;; Start ElScreen!
 
+;;;###autoload
 (defun elscreen ()
+  (interactive)
+
   ;; Prepare meta data for each frame.
   (mapcar
    (lambda (frame)
@@ -1868,5 +1872,3 @@ Use \\[toggle-read-only] to permit editing."
   (let ((prefix-key elscreen-prefix-key)
         (elscreen-prefix-key nil))
     (elscreen-set-prefix-key prefix-key)))
-
-(elscreen)
