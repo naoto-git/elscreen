@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.6.99.4 (July 04, 2008)")
+(defconst elscreen-version "1.4.6.99.5 (July 12, 2008)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 04, 2008
+;; Revised:  July 12, 2008
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -501,7 +501,8 @@ from `elscreen-frame-confs', a cons cell."
 
 (defvar elscreen-notify-screen-modification-suppress-flag nil)
 (defmacro elscreen-notify-screen-modification-suppress (&rest body)
-  `(let ((elscreen-notify-screen-modification-suppress-flag t))
+  `(let ((elscreen-notify-screen-modification-suppress-flag t)
+         (window-configuration-change-hook nil))
      ,@body))
 
 (defvar elscreen-screen-update-hook nil)
@@ -709,7 +710,7 @@ from `elscreen-frame-confs', a cons cell."
       screen-name))))
 
 (defun elscreen-goto-internal (screen)
-  "Set the configuration of windows, buffers and markers previousuly
+  "Set the configuration of windows, buffers and markers previously
 stored as SCREEN."
   (let ((elscreen-window-configuration
          (elscreen-get-window-configuration screen)))
@@ -1039,7 +1040,7 @@ is ommitted, current screen will survive."
 (elscreen-set-help 'elscreen-help)
 
 (defun elscreen-help ()
-  "Show key bindings of ElScreen and Add-On softwares."
+  "Show key bindings of ElScreen and Add-On software."
   (interactive)
   (with-output-to-temp-buffer "*ElScreen Help*"
     (princ (substitute-command-keys

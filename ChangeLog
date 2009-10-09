@@ -1,3 +1,9 @@
+2008-07-12  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-notify-screen-modification-suppress): Set
+	window-configuration-change-hook to nil.
+
+
 2008-07-04  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-prefix-key): Test elscreen-set-prefix-key
