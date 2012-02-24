@@ -2,13 +2,13 @@
 ;;
 ;; elscreen.el
 ;;
-(defconst elscreen-version "1.4.99.15 (July 12, 2008)")
+(defconst elscreen-version "1.4.99.17 (May 30, 2010)")
 ;;
 ;; Author:   Naoto Morishima <naoto@morishima.net>
 ;; Based on: screens.el
 ;;              by Heikki T. Suopanki <suopanki@stekt1.oulu.fi>
 ;; Created:  June 22, 1996
-;; Revised:  July 12, 2008
+;; Revised:  May 30, 2010
 
 ;; This program is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -167,7 +167,7 @@ nil means don't display tabs."
     :group 'elscreen)
 
   (defface elscreen-tab-background-face
-    '((((type x w32 mac) (class color))
+    '((((type x w32 mac ns) (class color))
        :background "Gray50")
       (((class color))
        (:background "black")))
@@ -175,7 +175,7 @@ nil means don't display tabs."
     :group 'elscreen)
 
   (defface elscreen-tab-control-face
-    '((((type x w32 mac) (class color))
+    '((((type x w32 mac ns) (class color))
        (:background "white" :foreground "black" :underline "Gray50"))
       (((class color))
        (:background "white" :foreground "black" :underline t))
@@ -191,7 +191,7 @@ nil means don't display tabs."
     :group 'elscreen)
 
   (defface elscreen-tab-other-screen-face
-    '((((type x w32 mac) (class color))
+    '((((type x w32 mac ns) (class color))
        :background "Gray85" :foreground "Gray50")
       (((class color))
        (:background "blue" :foreground "black" :underline t)))
@@ -550,22 +550,26 @@ from `elscreen-frame-confs', a cons cell."
    'progn
    (mapcar
     (lambda (hook-or-function)
-      (let ((mode ''normal))
+      (let ((mode ''normal)
+            (non-interactive t))
         (when (listp hook-or-function)
           (setq mode (nth 1 hook-or-function))
+          (setq non-interactive (not (nth 2 hook-or-function)))
           (setq hook-or-function (nth 0 hook-or-function)))
         (cond
          ((string-match "-\\(hooks?\\|functions\\)$"
                         (symbol-name hook-or-function))
           `(add-hook (quote ,hook-or-function)
                      (lambda (&rest ignore)
-                       (elscreen-notify-screen-modification ,mode))))
+                       (when (or ,non-interactive (interactive-p))
+                         (elscreen-notify-screen-modification ,mode)))))
          (t ;; Assume hook-or-function is function
           `(defadvice ,hook-or-function (around
                                          elscreen-screen-modified-advice
                                          activate)
              ad-do-it
-             (elscreen-notify-screen-modification ,mode))))))
+             (when (or ,non-interactive (interactive-p))
+               (elscreen-notify-screen-modification ,mode)))))))
     hooks-and-functions)))
 
 (defun elscreen-get-screen-to-name-alist-cache ()
@@ -714,7 +718,7 @@ stored as SCREEN."
          (elscreen-get-window-configuration screen)))
     (elscreen-apply-window-configuration elscreen-window-configuration)))
 
-(defvar elscreen-create-hook nil) ;; XXX
+(defvar elscreen-create-internal-hook nil)
 (defun elscreen-create-internal ()
   "Create a new screen."
   (cond
@@ -732,9 +736,19 @@ stored as SCREEN."
        screen (elscreen-default-window-configuration))
       (elscreen-append-screen-to-history screen)
       (elscreen-notify-screen-modification 'force)
-      (run-hooks 'elscreen-create-hook) ;; XXX
+      (run-hooks 'elscreen-create-internal-hook)
       screen))))
 
+(defun elscreen-clone-internal (screen)
+  (let* ((elscreen-window-configuration
+          (save-window-excursion
+            (elscreen-goto-internal screen)
+            (elscreen-current-window-configuration)))
+         (clone (elscreen-create-internal)))
+    (elscreen-set-window-configuration clone elscreen-window-configuration)
+    clone))
+
+(defvar elscreen-kill-internal-hook nil)
 (defun elscreen-kill-internal (screen)
   (cond
    ((not (elscreen-screen-live-p screen))
@@ -743,6 +757,7 @@ stored as SCREEN."
     (signal 'elscreen-sole-screen screen)))
   (elscreen-delete-screen-property screen)
   (elscreen-delete-screen-from-history screen)
+  (run-hooks 'elscreen-kill-internal-hook)
   screen)
 
 (defun elscreen-find-screens (condition)
@@ -825,11 +840,14 @@ Default value for SEC is 3."
 
 ;;; User Interfaces:
 
+(defvar elscreen-create-hook nil)
 (defun elscreen-create ()
   "Create a new screen and switch to it."
   (interactive)
   (condition-case nil
-      (elscreen-goto (elscreen-create-internal))
+      (progn
+        (elscreen-goto (elscreen-create-internal))
+        (run-hooks 'elscreen-create-hook))
     (elscreen-no-more-screens
      (elscreen-message "No more screens"))))
 
@@ -839,12 +857,7 @@ If SCREEN is ommitted, current-screen is used."
   (interactive)
   (condition-case nil
       (let* ((screen (or screen (elscreen-get-current-screen)))
-             (elscreen-window-configuration
-              (save-window-excursion
-                (elscreen-goto-internal screen)
-                (elscreen-current-window-configuration)))
-             (clone (elscreen-create-internal)))
-        (elscreen-set-window-configuration clone elscreen-window-configuration)
+             (clone (elscreen-clone-internal screen)))
         (elscreen-goto clone))
     (elscreen-nonexistent-screen
      (elscreen-message "There is no such screen, cannot clone"))
@@ -894,15 +907,16 @@ is ommitted, current screen will survive."
                         (delq screen (sort (elscreen-get-screen-list) '<))))
          screen-list-string)
     (cond
-     ((not (elscreen-screen-live-p screen)) ;; XXX
-      (when (interactive-p)
-        (elscreen-message "There is no such screen")))
+     ((not (elscreen-screen-live-p screen))
+      (elscreen-message "There is no such screen"))
      ((null screen-list)
-      (when (interactive-p)
-        (elscreen-message "There is only one screen, cannot kill")))
+      (elscreen-message "There is only one screen, cannot kill"))
      ((or
        (not (interactive-p))
        (yes-or-no-p (format "Really kill screens other than %d? " screen)))
+      (elscreen-set-window-configuration
+       (elscreen-get-current-screen)
+       (elscreen-current-window-configuration))
       (setq screen-list-string (mapconcat
                                 (lambda (screen)
                                   (elscreen-kill-internal screen)
@@ -910,8 +924,7 @@ is ommitted, current screen will survive."
                                 screen-list ","))
       (elscreen-goto-internal screen)
       (elscreen-notify-screen-modification 'force-immediately)
-      (when (interactive-p)
-        (elscreen-message (format "screen %s killed" screen-list-string)))))
+      (elscreen-message (format "screen %s killed" screen-list-string))))
     screen-list))
 
 (defvar elscreen-goto-hook nil)
@@ -1744,6 +1757,15 @@ Use \\[toggle-read-only] to permit editing."
 
   (static-when elscreen-on-emacs
     (defun elscreen-e21-command-line ()
+      (mapc
+       (lambda (symbol-alias-alist)
+         (let ((new-alias (car symbol-alias-alist))
+               (base-variable (cdr symbol-alias-alist)))
+           (when (and (not (boundp new-alias)) (boundp base-variable))
+             (defvaralias new-alias base-variable))))
+       '((cl1-dir . dir)
+         (cl1-line . line)
+         (cl1-column . column)))
       (when (string-match "\\`-" argi)
         (error "Unknown option `%s'" argi))
       (setq file-count (1+ file-count))
@@ -1751,10 +1773,10 @@ Use \\[toggle-read-only] to permit editing."
       (let* ((file
               (expand-file-name
                (command-line-normalize-file-name orig-argi)
-               dir)))
-        (elscreen-command-line-find-file file file-count line column))
-      (setq line 0)
-      (setq column 0)
+               cl1-dir)))
+        (elscreen-command-line-find-file file file-count cl1-line cl1-column))
+      (setq cl1-line 0)
+      (setq cl1-column 0)
       t)
 
     (defun elscreen-e21-command-line-initialize ()
@@ -1836,7 +1858,7 @@ Use \\[toggle-read-only] to permit editing."
 (defun elscreen ()
   (interactive)
 
-  ;; Prepare meta data for each frame.
+  ;; Prepare metadata for each frame.
   (mapcar
    (lambda (frame)
      (elscreen-make-frame-confs frame 'keep))
@@ -1856,7 +1878,8 @@ Use \\[toggle-read-only] to permit editing."
 
   ;; Prepare hooks to notify that screen is modified.
   (elscreen-screen-modified-hook-setup
-   (recenter 'force) (change-major-mode-hook 'force)
+   (recenter 'force 'interactive-only)
+   (change-major-mode-hook 'force)
    other-window
    window-configuration-change-hook window-size-change-functions
    (handle-switch-frame 'force) ;; GNU Emacs 21

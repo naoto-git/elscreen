@@ -1,3 +1,18 @@
+2010-05-30  Naoto Morishima  <naoto@morishima.net>
+
+	* elscreen.el (elscreen-tab-background-face): Add ns to type.
+	(elscreen-tab-control-face): Likewise.
+	(elscreen-tab-other-screen-face): Likewise.
+	(elscreen-screen-modified-hook-setup): Add flag to specify when
+	the hook should be executed, usually or interactive-p only.
+	(elscreen-e21-command-line): Add cl1- prefix to some local
+	variables if these variables defined in startup.el need it.
+	(elscreen-create-internal-hook): New variable.
+	(elscreen-kill-internal-hook): Likewise.
+	(elscreen-clone-internal): New function.
+	(elscreen-clone): Use it.
+
+
 2008-07-12  Naoto Morishima  <naoto@morishima.net>
 
 	* elscreen.el (elscreen-notify-screen-modification-suppress): Set
